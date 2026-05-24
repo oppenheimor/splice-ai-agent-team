@@ -1,0 +1,94 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+# ── 全局环境 ──
+env:
+  REGISTRY: splice-ai-cn-shanghai.cr.volces.com
+  IMAGE_NAME: splice-ai/<PROJECT_NAME>-nextjs
+  SHORT_SHA: ${{ github.sha }}
+
+jobs:
+  build-and-deploy:
+    runs-on: [self-hosted, <PROJECT_NAME>]
+    permissions:
+      contents: read
+
+    steps:
+      # ── 1. 代码 ──
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. 登录镜像仓库 ──
+      - name: Login to Volcengine CR
+        run: |
+          printf '%s' '${{ secrets.VOLCENGINE_CR_PASSWORD }}' \
+            | docker login ${{ env.REGISTRY }} \
+              -u '${{ secrets.VOLCENGINE_CR_USERNAME }}' \
+              --password-stdin
+
+      # ── 3. 构建 & 推送 ──
+      - name: Build & Push
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            .
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      # ── 4. 准备 SSH ──
+      - name: Prepare SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' '${{ secrets.SERVER_SSH_KEY }}' > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H '${{ secrets.SERVER_HOST }}' >> ~/.ssh/known_hosts
+
+      # ── 5. 校验并上传 compose ──
+      - name: Upload compose file
+        run: |
+          test -f docker-compose.yml || (echo "❌ docker-compose.yml not found" && exit 1)
+          ssh -i ~/.ssh/deploy_key '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}' \
+            'mkdir -p /home/deploy/<PROJECT_NAME>'
+          scp -i ~/.ssh/deploy_key docker-compose.yml \
+            '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/deploy/<PROJECT_NAME>/docker-compose.yml'
+
+      # ── 6. 在服务器上直接写入 .env（不落本地磁盘） ──
+      - name: Write production env on server
+        run: |
+          ssh -i ~/.ssh/deploy_key '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}' <<'EOF'
+            mkdir -p /home/deploy/<PROJECT_NAME>
+            cat > /home/deploy/<PROJECT_NAME>/.env <<EOL
+          DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY_PRODUCTION }}
+          DATABASE_URL=${{ secrets.DATABASE_URL_PRODUCTION }}
+          EOL
+          EOF
+
+      # ── 7. 部署 ──
+      - name: Deploy to Server
+        timeout-minutes: 60
+        run: |
+          ssh -i ~/.ssh/deploy_key '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}' <<'REMOTE'
+            set -euo pipefail
+            cd /home/deploy/<PROJECT_NAME>
+
+            # 登录（幂等，已登录会跳过）
+            printf '%s' '${{ secrets.VOLCENGINE_CR_PASSWORD }}' \
+              | docker login ${{ env.REGISTRY }} \
+                  -u '${{ secrets.VOLCENGINE_CR_USERNAME }}' \
+                  --password-stdin || true
+
+            docker compose -f docker-compose.yml pull
+            docker compose -f docker-compose.yml up -d --remove-orphans
+
+            # 简单健康检查
+            sleep 10
+            docker compose -f docker-compose.yml ps | grep -i 'unhealthy' && {
+              echo "❌ 容器健康检查失败"; exit 1;
+            }
+
+            docker image prune -af --filter "until=24h"
+          REMOTE
