@@ -1,7 +1,7 @@
 services:
   nextjs:
-    image: splice-ai-cn-shanghai.cr.volces.com/splice-ai/<PROJECT_NAME>-nextjs:latest
-    container_name: <PROJECT_NAME>-nextjs
+    image: splice-ai-cn-shanghai.cr.volces.com/splice-ai/agent-team-nextjs:latest
+    container_name: agent-team-nextjs
     restart: always
     networks:
       - app-network

@@ -7,12 +7,12 @@ on:
 # ── 全局环境 ──
 env:
   REGISTRY: splice-ai-cn-shanghai.cr.volces.com
-  IMAGE_NAME: splice-ai/<PROJECT_NAME>-nextjs
+  IMAGE_NAME: splice-ai/agent-team-nextjs
   SHORT_SHA: ${{ github.sha }}
 
 jobs:
   build-and-deploy:
-    runs-on: [self-hosted, <PROJECT_NAME>]
+    runs-on: [self-hosted, agent-team]
     permissions:
       contents: read
 
@@ -52,16 +52,16 @@ jobs:
         run: |
           test -f docker-compose.yml || (echo "❌ docker-compose.yml not found" && exit 1)
           ssh -i ~/.ssh/deploy_key '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}' \
-            'mkdir -p /home/deploy/<PROJECT_NAME>'
+            'mkdir -p /home/deploy/agent-team'
           scp -i ~/.ssh/deploy_key docker-compose.yml \
-            '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/deploy/<PROJECT_NAME>/docker-compose.yml'
+            '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/deploy/agent-team/docker-compose.yml'
 
       # ── 6. 在服务器上直接写入 .env（不落本地磁盘） ──
       - name: Write production env on server
         run: |
           ssh -i ~/.ssh/deploy_key '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}' <<'EOF'
-            mkdir -p /home/deploy/<PROJECT_NAME>
-            cat > /home/deploy/<PROJECT_NAME>/.env <<EOL
+            mkdir -p /home/deploy/agent-team
+            cat > /home/deploy/agent-team/.env <<EOL
           DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY_PRODUCTION }}
           DATABASE_URL=${{ secrets.DATABASE_URL_PRODUCTION }}
           EOL
@@ -73,7 +73,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}' <<'REMOTE'
             set -euo pipefail
-            cd /home/deploy/<PROJECT_NAME>
+            cd /home/deploy/agent-team
 
             # 登录（幂等，已登录会跳过）
             printf '%s' '${{ secrets.VOLCENGINE_CR_PASSWORD }}' \
