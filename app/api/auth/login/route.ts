@@ -5,6 +5,7 @@ import {
   shouldUseSecureAuthCookie,
 } from "@/lib/auth/cookies";
 import { loginOrRegisterWithPassword } from "@/lib/auth/session";
+import { buildRequestUrl } from "@/lib/http/request-origin";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
 }
 
 function buildLoginUrl(request: NextRequest, error: string, nextPath: string) {
-  const url = new URL("/agent-team/login", request.url);
+  const url = buildRequestUrl(request, "/agent-team/login");
   url.searchParams.set("error", error);
   if (nextPath) {
     url.searchParams.set("next", nextPath);
@@ -88,8 +89,8 @@ function sanitizeNextPath(value: string): string {
 }
 
 function toBasePathUrl(request: NextRequest, pathname: string): URL {
-  return new URL(
+  return buildRequestUrl(
+    request,
     pathname.startsWith("/agent-team") ? pathname : `/agent-team${pathname}`,
-    request.url,
   );
 }

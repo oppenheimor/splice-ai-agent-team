@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME } from "@/lib/auth/cookies";
+import { buildRequestUrl } from "@/lib/http/request-origin";
 
 const protectedPathPrefixes = [
   "/agent-team/admin",
@@ -25,7 +26,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const loginUrl = new URL("/agent-team/login", request.url);
+  const loginUrl = buildRequestUrl(request, "/agent-team/login");
   loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
 
   return NextResponse.redirect(loginUrl);
