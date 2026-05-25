@@ -24,13 +24,11 @@ RUN corepack enable \
 COPY . .
 
 # 跳过数据库连接检查（仅用于生成 Prisma Client）
-# TODO: 需要数据库的时候把它打开
-# ENV DATABASE_URL="skip"
+ENV DATABASE_URL="skip"
 
 # 生成 Prisma Client、构建 Next.js 应用
 # pnpm prune --prod 移除 devDependencies，减小产物体积
-# TODO: 需要数据库的时候把它打开
-# RUN pnpm prisma generate
+RUN pnpm prisma generate
 
 RUN pnpm build \
   && pnpm prune --prod
@@ -65,8 +63,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # 复制 Prisma schema（用于 migrate / generate）
-# TODO: 需要数据库的时候把它打开
-# COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./prisma/schema.prisma
 
 # 复制自定义启动脚本
 COPY --chown=nextjs:nodejs entrypoint.sh ./entrypoint.sh

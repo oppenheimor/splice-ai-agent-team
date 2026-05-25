@@ -1,10 +1,15 @@
 export {
   AUTH_COOKIE_NAME,
-  createDemoUser,
-  decodeDemoUser,
-  encodeDemoUser,
+  SESSION_MAX_AGE_SECONDS,
+  shouldUseSecureAuthCookie,
+} from "./cookies";
+export {
   getCurrentUser,
+  isValidPassword,
+  isValidUsername,
+  loginOrRegisterWithPassword,
+  normalizeUsername,
   requireUser,
+  revokeSession,
 } from "./session";
-// TODO: 待替换
-export type { DemoUser } from "./session";
+export type { AuthUser, LoginSession } from "./session";

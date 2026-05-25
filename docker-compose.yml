@@ -9,6 +9,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - AUTH_COOKIE_SECURE=false
 
 networks:
   app-network:

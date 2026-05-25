@@ -1,35 +1,92 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, createDemoUser, encodeDemoUser } from "@/lib/auth/session";
+import {
+  AUTH_COOKIE_NAME,
+  SESSION_MAX_AGE_SECONDS,
+  shouldUseSecureAuthCookie,
+} from "@/lib/auth/cookies";
+import { loginOrRegisterWithPassword } from "@/lib/auth/session";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
-  console.log(formData);
-  const identifier = String(formData.get("identifier") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const nextPath = sanitizeNextPath(String(formData.get("next") ?? ""));
 
-  console.log(identifier);
-
-  if (!identifier) {
+  if (!username || !password) {
     return NextResponse.redirect(
-      new URL("/agent-team/login?error=missing_identifier", request.url),
+      buildLoginUrl(request, "missing_credentials", nextPath),
     );
   }
 
-  const user = createDemoUser(identifier);
+  let session;
 
-  // TODO: 这里重定向写死了需求诊断
+  try {
+    session = await loginOrRegisterWithPassword({
+      username,
+      password,
+      userAgent: request.headers.get("user-agent"),
+      ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_USERNAME") {
+      return NextResponse.redirect(
+        buildLoginUrl(request, "invalid_username", nextPath),
+      );
+    }
+
+    if (error instanceof Error && error.message === "INVALID_PASSWORD") {
+      return NextResponse.redirect(
+        buildLoginUrl(request, "invalid_password", nextPath),
+      );
+    }
+
+    if (error instanceof Error && error.message === "INVALID_CREDENTIALS") {
+      return NextResponse.redirect(
+        buildLoginUrl(request, "invalid_credentials", nextPath),
+      );
+    }
+
+    throw error;
+  }
+
   const response = NextResponse.redirect(
-    new URL("/agent-team/requirements-diagnosis", request.url),
+    new URL(toBasePathUrl(nextPath || "/treasure/hunt"), request.url),
   );
 
   response.cookies.set({
     name: AUTH_COOKIE_NAME,
-    value: encodeDemoUser(user),
+    value: session.sessionId,
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureAuthCookie(),
     path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: SESSION_MAX_AGE_SECONDS,
   });
 
   return response;
+}
+
+function buildLoginUrl(request: NextRequest, error: string, nextPath: string) {
+  const url = new URL("/agent-team/login", request.url);
+  url.searchParams.set("error", error);
+  if (nextPath) {
+    url.searchParams.set("next", nextPath);
+  }
+  return url;
+}
+
+function sanitizeNextPath(value: string): string {
+  if (!value.startsWith("/")) {
+    return "";
+  }
+
+  if (value.startsWith("//") || value.includes("://")) {
+    return "";
+  }
+
+  return value;
+}
+
+function toBasePathUrl(pathname: string): string {
+  return pathname.startsWith("/agent-team") ? pathname : `/agent-team${pathname}`;
 }

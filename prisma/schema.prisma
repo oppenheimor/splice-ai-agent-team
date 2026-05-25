@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String                 @id @default(cuid())
+  username        String                 @unique
+  passwordHash    String
+  phone           String?                @unique
+  name            String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  sessions        Session[]
+  analyticsEvents TreasureAnalyticsEvent[]
+  chatMessages    TreasureChatMessage[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String    @id
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  userAgent String?
+  ipAddress String?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model TreasureAnalyticsEvent {
+  id             String   @id @default(cuid())
+  userId         String
+  sessionId      String?
+  visitorId      String?
+  conversationId String?
+  type           String
+  pagePath       String
+  target         String?
+  payload        Json?
+  userAgent      String?
+  ipAddress      String?
+  occurredAt     DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([type, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([sessionId, occurredAt])
+  @@index([visitorId, occurredAt])
+  @@index([conversationId, occurredAt])
+  @@map("treasure_analytics_events")
+}
+
+model TreasureChatMessage {
+  id             String   @id @default(cuid())
+  userId         String
+  sessionId      String?
+  visitorId      String?
+  conversationId String
+  messageId      String
+  role           String
+  text           String?
+  parts          Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, messageId])
+  @@index([userId, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([visitorId, createdAt])
+  @@index([conversationId, createdAt])
+  @@map("treasure_chat_messages")
+}
