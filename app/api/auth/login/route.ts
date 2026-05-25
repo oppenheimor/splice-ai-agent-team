@@ -49,7 +49,9 @@ export async function POST(request: NextRequest) {
     throw error;
   }
 
-  const response = NextResponse.redirect(toBasePathUrl(nextPath || "/treasure/hunt"));
+  const response = NextResponse.redirect(
+    toBasePathUrl(request, nextPath || "/treasure/hunt"),
+  );
 
   response.cookies.set({
     name: AUTH_COOKIE_NAME,
@@ -64,13 +66,13 @@ export async function POST(request: NextRequest) {
   return response;
 }
 
-function buildLoginUrl(_request: NextRequest, error: string, nextPath: string) {
-  const url = new URL("/agent-team/login", "http://localhost");
+function buildLoginUrl(request: NextRequest, error: string, nextPath: string) {
+  const url = new URL("/agent-team/login", request.url);
   url.searchParams.set("error", error);
   if (nextPath) {
     url.searchParams.set("next", nextPath);
   }
-  return `${url.pathname}${url.search}`;
+  return url;
 }
 
 function sanitizeNextPath(value: string): string {
@@ -85,6 +87,9 @@ function sanitizeNextPath(value: string): string {
   return value;
 }
 
-function toBasePathUrl(pathname: string): string {
-  return pathname.startsWith("/agent-team") ? pathname : `/agent-team${pathname}`;
+function toBasePathUrl(request: NextRequest, pathname: string): URL {
+  return new URL(
+    pathname.startsWith("/agent-team") ? pathname : `/agent-team${pathname}`,
+    request.url,
+  );
 }

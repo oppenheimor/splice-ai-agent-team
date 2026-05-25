@@ -25,10 +25,10 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const loginUrl = new URL("/agent-team/login", "http://localhost");
+  const loginUrl = new URL("/agent-team/login", request.url);
   loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
 
-  return NextResponse.redirect(`${loginUrl.pathname}${loginUrl.search}`);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
