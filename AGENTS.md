@@ -8,3 +8,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## 业务需求
 
 @docs/业务需求.md
+
+## 技术栈要求
+
+NextJS + React + TypeScript + TailwindCSS + ShadcnUI + Prisma + PostgreSQL + Deepseek + Vercel SDK + Docker + GitHub Action
+
+
+## 其他要求
+
+1. 文档始终用中文编写
