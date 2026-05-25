@@ -1,0 +1,12 @@
+{
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "\"/Users/paulchess/.nvm/versions/node/v24.14.0/bin/node\" \"/Users/paulchess/Desktop/Home/entrepreneurship/splice-ai-agent-team/.codex/hooks/gsd-check-update.js\""
+        }
+      ]
+    }
+  ]
+}
