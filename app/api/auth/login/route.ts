@@ -49,9 +49,7 @@ export async function POST(request: NextRequest) {
     throw error;
   }
 
-  const response = NextResponse.redirect(
-    new URL(toBasePathUrl(nextPath || "/treasure/hunt"), request.url),
-  );
+  const response = NextResponse.redirect(toBasePathUrl(nextPath || "/treasure/hunt"));
 
   response.cookies.set({
     name: AUTH_COOKIE_NAME,
@@ -66,13 +64,13 @@ export async function POST(request: NextRequest) {
   return response;
 }
 
-function buildLoginUrl(request: NextRequest, error: string, nextPath: string) {
-  const url = new URL("/agent-team/login", request.url);
+function buildLoginUrl(_request: NextRequest, error: string, nextPath: string) {
+  const url = new URL("/agent-team/login", "http://localhost");
   url.searchParams.set("error", error);
   if (nextPath) {
     url.searchParams.set("next", nextPath);
   }
-  return url;
+  return `${url.pathname}${url.search}`;
 }
 
 function sanitizeNextPath(value: string): string {
