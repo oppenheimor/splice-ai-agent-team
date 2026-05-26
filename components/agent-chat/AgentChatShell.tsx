@@ -79,22 +79,24 @@ export function AgentChatShell({ agent, emptyState }: AgentChatShellProps) {
                   <article
                     key={message.id}
                     className={cn(
-                      "grid grid-cols-[40px_minmax(0,1fr)] gap-3",
-                      message.role === "user" && "grid-cols-[minmax(0,1fr)_40px]"
+                      "flex flex-col gap-2 sm:grid sm:gap-3",
+                      message.role === "user"
+                        ? "items-end sm:grid-cols-[minmax(0,1fr)_40px]"
+                        : "items-start sm:grid-cols-[40px_minmax(0,1fr)]"
                     )}
                   >
                     <div
                       className={cn(
-                        "grid h-10 w-10 place-items-center rounded-lg border border-border bg-background text-sm font-bold",
-                        message.role === "user" && "order-2"
+                        "grid h-9 w-9 place-items-center rounded-lg border border-border bg-background text-sm font-bold sm:h-10 sm:w-10",
+                        message.role === "user" && "sm:order-2"
                       )}
                     >
                       {message.role === "user" ? <SquareUserRound className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                     </div>
                     <div
                       className={cn(
-                        "max-w-[min(720px,100%)] rounded-lg border border-border bg-card px-4 py-3 shadow-sm",
-                        message.role === "user" && "justify-self-end bg-primary text-primary-foreground"
+                        "w-full max-w-full rounded-lg border border-border bg-card px-4 py-3 shadow-sm sm:max-w-[min(720px,100%)]",
+                        message.role === "user" && "bg-primary text-primary-foreground sm:justify-self-end"
                       )}
                     >
                       <MessagePartsRenderer parts={message.parts || []} addToolOutput={chat.addToolOutput} />
@@ -102,7 +104,7 @@ export function AgentChatShell({ agent, emptyState }: AgentChatShellProps) {
                   </article>
                 ))}
                 {chat.isBusy ? (
-                  <div className="ml-12 flex max-w-md items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 shadow-sm">
+                  <div className="flex max-w-full items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 shadow-sm sm:ml-12 sm:max-w-md">
                     <span className="h-2.5 w-2.5 rounded-full bg-primary" />
                     <div>
                       <strong className="block text-sm">正在整理</strong>
@@ -110,7 +112,7 @@ export function AgentChatShell({ agent, emptyState }: AgentChatShellProps) {
                     </div>
                   </div>
                 ) : null}
-                {chat.error ? <div className="ml-12 text-sm text-destructive">{chat.error.message}</div> : null}
+                {chat.error ? <div className="text-sm text-destructive sm:ml-12">{chat.error.message}</div> : null}
                 <div ref={endRef} />
               </div>
             )}

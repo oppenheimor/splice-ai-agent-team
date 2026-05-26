@@ -22,15 +22,20 @@ type TreasureHuntHistoryDrawerProps = TreasureHuntConversationListProps & {
 
 type TreasureHuntHistoryButtonProps = {
   className?: string;
+  ariaLabel?: string;
   onClick: () => void;
 };
 
-export function TreasureHuntHistoryButton({ className, onClick }: TreasureHuntHistoryButtonProps) {
+export function TreasureHuntHistoryButton({
+  className,
+  ariaLabel = "查看会话历史",
+  onClick,
+}: TreasureHuntHistoryButtonProps) {
   return (
     <button
       type="button"
       className={className}
-      aria-label="查看会话历史"
+      aria-label={ariaLabel}
       onClick={onClick}
     >
       <Menu className="h-5 w-5" />

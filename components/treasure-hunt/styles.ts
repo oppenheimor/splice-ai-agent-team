@@ -8,9 +8,10 @@ export const treasureHeroCard =
   "!border-[1.5px] !border-[rgba(114,93,66,0.12)] !bg-[linear-gradient(180deg,rgba(255,253,242,0.98)_0%,rgba(255,247,225,0.96)_100%)] !text-[#6b553d] !shadow-[0_8px_0_rgba(114,93,66,0.16),0_18px_36px_rgba(93,75,45,0.12)] max-sm:!shadow-[0_6px_0_rgba(114,93,66,0.12),0_12px_26px_rgba(93,75,45,0.1)] [&_*]:!text-inherit [&>div]:max-sm:!p-4";
 
 export const treasureMessageCard =
-  "!border-0 !shadow-[0_8px_0_rgba(114,93,66,0.16),0_18px_36px_rgba(93,75,45,0.12)] max-w-full max-sm:!shadow-[0_5px_0_rgba(114,93,66,0.12),0_10px_22px_rgba(93,75,45,0.1)] [&>div]:w-full";
+  "relative !border-0 !shadow-[0_8px_0_rgba(114,93,66,0.16),0_18px_36px_rgba(93,75,45,0.12)] max-w-full max-sm:!shadow-[0_5px_0_rgba(114,93,66,0.12),0_10px_22px_rgba(93,75,45,0.1)] [&>div]:w-full";
 
-export const treasureUserMessageCard = "[&_*]:!text-white !text-white";
+export const treasureUserMessageCard =
+  "[&_*]:!text-white !text-white";
 
 export const treasureIconButton =
   "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border-2 border-[#aaa69d] bg-[#fff8df] px-3.5 text-[0.95rem] font-black text-[#725d42] shadow-[0_4px_0_#d8c8a2] transition active:translate-y-0.5 active:shadow-[0_2px_0_#d8c8a2]";
