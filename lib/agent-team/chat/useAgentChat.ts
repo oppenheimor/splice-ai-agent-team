@@ -16,6 +16,7 @@ import {
 
 type UseAgentChatOptions = {
   conversationId?: string;
+  requestBody?: Record<string, unknown>;
 };
 
 export type UseAgentChatResult = {
@@ -52,10 +53,11 @@ export function useAgentChat(agent: AgentManifest, options: UseAgentChatOptions 
             conversationId: activeConversation?.id || id,
             visitorId,
             timeZone: getClientTimeZone(),
+            ...options.requestBody,
           },
         }),
       }),
-    [activeConversation?.id, agent.id, visitorId],
+    [activeConversation?.id, agent.id, options.requestBody, visitorId],
   );
 
   const { messages, sendMessage, setMessages, status, stop, error, addToolOutput } = useChat<UIMessage>({

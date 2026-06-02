@@ -1,7 +1,7 @@
 <!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# 这不是你记忆中的 Next.js
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+这个版本包含破坏性变更：API、约定和文件结构都可能不同于你的训练数据。写代码前必须阅读 `node_modules/next/dist/docs/` 中的相关指南，并留意废弃提示。
 <!-- END:nextjs-agent-rules -->
 
 
@@ -11,9 +11,86 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## 技术栈要求
 
-NextJS + React + TypeScript + TailwindCSS + ShadcnUI + Prisma + PostgreSQL + Deepseek + Vercel SDK + Docker + GitHub Action
+- react@19.2.4 + typescript@6.0.3
+- next@16.2.6
+- tailwindcss@4.3.0 + shadcn/ui（样式优先使用这个组合，除非指定使用某个另外的组件库）
+- prisma@7.8.0 + pg（postgresql)@8.21.0
+- ai（vercel sdk）@6.0.182
+
+部署：Docker + GitHub Action
+
+## 项目结构
 
 
-## 其他要求
+## 关键约定
 
-1. 文档始终用中文编写
+1. 文档和注释始终用中文编写；
+
+2. 当某一行/段代码逻辑为边界情况处理 / 认知理解复杂度高，一定要写注释；
+
+3. 当某一行/段代码为临时代码的时候，上面一定要打上 TODO: 的注释，并写清楚解释；
+
+4. 变量 / 函数命名一定要建立你在对项目的全局认知下，禁止基于当前的局部认知临时起一个不利于长期维护的变量名；
+
+5. 常量 / 工具函数 / 组件 / TS 类别分别拆到 constants/ utils/ components/ types/ 目录下面去，确保职责分明；
+
+6. `tsx` 文件禁止超过 500 行；
+
+7. 优先使用函数式编程；
+
+
+## 执行原则
+
+权衡说明：这些规则偏向谨慎而不是速度。遇到非常简单的任务，可以结合实际判断。
+
+1. 编码前先思考
+不要假设，不要隐藏困惑，要把取舍讲清楚。
+
+实现之前：
+
+明确说明你的假设。如果不确定，就提问。
+如果存在多种理解，要列出来，不要静默选择。
+如果存在更简单的方案，要说出来。必要时要提出反对意见。
+如果有不清楚的地方，停下来。指出哪里不清楚，然后提问。
+
+2. 简单性优先
+用能解决问题的最少代码，不写推测性代码。
+
+不实现需求之外的功能。
+不为单次使用的代码增加抽象。
+不增加没有被要求的“灵活性”或“可配置性”。
+不为不可能出现的场景增加错误处理。
+如果写了 200 行但 50 行就能解决，要重写。
+问自己：“资深工程师会不会认为这过度复杂？”如果答案是会，就简化。
+
+3. 外科式修改
+只改必须修改的地方，只清理自己造成的问题。
+
+编辑已有代码时：
+
+不要顺手“优化”相邻代码、注释或格式。
+不要重构没有坏掉的东西。
+匹配现有风格，即使你个人会用另一种写法。
+如果发现无关的死代码，可以提出来，但不要直接删除。
+如果你的修改产生了孤立代码：
+
+删除由你的修改造成的未使用 import、变量、函数。
+不要删除原本就存在的死代码，除非用户要求。
+检验标准：每一行变更都应该能追溯到用户请求。
+
+4. 目标驱动执行
+定义成功标准，循环推进直到验证完成。
+
+把任务转成可验证目标：
+
+“增加校验” → “先写无效输入测试，再让测试通过”
+“修 bug” → “先写能复现 bug 的测试，再让测试通过”
+“重构 X” → “确保重构前后测试都通过”
+对于多步骤任务，先给出简短计划：
+
+1. [步骤] → 验证：[检查项]
+2. [步骤] → 验证：[检查项]
+3. [步骤] → 验证：[检查项]
+强成功标准能让执行者独立闭环。弱成功标准（例如“让它能用”）会导致反复澄清。
+
+如果 diff 里的无关变更更少、因为过度复杂导致的返工更少、澄清问题发生在实现前而不是出错后，就说明这些规则正在发挥作用。

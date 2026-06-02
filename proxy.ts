@@ -12,6 +12,16 @@ const protectedPathPrefixes = [
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isRequirementsDemoPath = pathname.startsWith("/requirements-diagnosis/demo-") ||
+    pathname.startsWith("/agent-team/requirements-diagnosis/demo-");
+  const isRequirementsAssetPath = pathname.startsWith("/requirements-diagnosis/avatars/") ||
+    pathname.startsWith("/agent-team/requirements-diagnosis/avatars/");
+
+  // 样品墙是静态设计预览，不读用户数据；跳过登录保护，避免污染正式功能验收。
+  if (isRequirementsDemoPath || isRequirementsAssetPath) {
+    return NextResponse.next();
+  }
+
   const isProtectedPath = protectedPathPrefixes.some((prefix) =>
     pathname.startsWith(prefix),
   );

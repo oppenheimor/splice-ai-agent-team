@@ -4,7 +4,18 @@ import type { ChatAddToolOutputFunction, UIMessage, UIMessagePart } from "ai";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
-import { CardsTool, ChartTool, ChecklistTool, ChoiceTool, ComparisonTool, GenericTool, ScorecardTool, TimelineTool } from "./tool-renderers";
+import {
+  CardsTool,
+  ChartTool,
+  ChecklistTool,
+  ChoiceTool,
+  ComparisonTool,
+  DataTableTool,
+  FrameworkTool,
+  GenericTool,
+  ScorecardTool,
+  TimelineTool,
+} from "./tool-renderers";
 import { Card } from "@/components/ui/card";
 
 type MessagePartsRendererProps = {
@@ -78,6 +89,8 @@ function ToolPart({
   if (toolName === "showChecklist") return part.state === "output-available" ? <ChecklistTool data={part.output || part.input} /> : <ToolLoading label="正在生成清单" />;
   if (toolName === "showTimeline") return part.state === "output-available" ? <TimelineTool data={part.output || part.input} /> : <ToolLoading label="正在生成时间线" />;
   if (toolName === "showScorecard") return part.state === "output-available" ? <ScorecardTool data={part.output || part.input} /> : <ToolLoading label="正在生成评分卡" />;
+  if (toolName === "showDataTable") return part.state === "output-available" ? <DataTableTool data={part.output || part.input} /> : <ToolLoading label="正在生成数据表" />;
+  if (toolName === "showFramework") return part.state === "output-available" ? <FrameworkTool data={part.output || part.input} /> : <ToolLoading label="正在生成诊断框架" />;
 
   return <GenericTool part={part} toolName={toolName} />;
 }

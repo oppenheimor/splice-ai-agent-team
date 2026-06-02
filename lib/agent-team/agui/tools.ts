@@ -61,6 +61,18 @@ const rowSchema: JsonSchemaObject = {
   },
 };
 
+const frameworkNodeSchema: JsonSchemaObject = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    title: { type: "string" },
+    description: { type: "string" },
+    status: { type: "string" },
+    items: { type: "array", items: { type: "string" }, maxItems: 5 },
+  },
+  required: ["title"],
+};
+
 const giftItemSchema: JsonSchemaObject = {
   type: "object",
   additionalProperties: false,
@@ -280,6 +292,50 @@ export const aguiTools = {
     },
   }),
 
+  showDataTable: tool({
+    description: "Render dense structured data such as tool lists, competitor lists, costs, sources, feature matrices, or POC task tables.",
+    inputSchema: jsonSchema({
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+        columns: {
+          type: "array",
+          minItems: 2,
+          maxItems: 8,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              key: { type: "string" },
+              label: { type: "string" },
+            },
+            required: ["key", "label"],
+          },
+        },
+        rows: { type: "array", items: rowSchema, minItems: 1, maxItems: 20 },
+      },
+      required: ["title", "columns", "rows"],
+    }),
+    execute: async (input) => input,
+  }),
+
+  showFramework: tool({
+    description: "Render a conceptual framework, maturity model, transformation path, diagnostic model, or decision tree.",
+    inputSchema: jsonSchema({
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+        nodes: { type: "array", items: frameworkNodeSchema, minItems: 2, maxItems: 8 },
+      },
+      required: ["title", "nodes"],
+    }),
+    execute: async (input) => input,
+  }),
+
   showGiftList: tool({
     description: [
       "Render a concrete gift or material recommendation list for surprise planning.",
@@ -362,7 +418,9 @@ export function buildAguiPrompt(): string {
     "5. 涉及多个候选方案、活动路线、关卡方向时，必须优先调用 showCards 或 showComparison。",
     "6. 涉及执行步骤、物料清单、发布检查、SOP 时，必须优先调用 showChecklist。",
     "7. 涉及时间安排、活动流程、路线时，必须优先调用 showTimeline。",
-    "8. 对于「大喜」这类惊喜策划：涉及礼物/物料/采购建议时优先调用 showGiftList；涉及心声卡/祝福卡/告白卡时优先调用 showWishCard；涉及照片回顾视频/剪映脚本时优先调用 showVideoScript。",
+    "8. 涉及高密度结构化信息、来源列表、竞品清单、成本拆解、工具参数时，必须优先调用 showDataTable。",
+    "9. 涉及成熟度模型、诊断框架、转型路径、决策树时，必须优先调用 showFramework。",
+    "10. 对于「大喜」这类惊喜策划：涉及礼物/物料/采购建议时优先调用 showGiftList；涉及心声卡/祝福卡/告白卡时优先调用 showWishCard；涉及照片回顾视频/剪映脚本时优先调用 showVideoScript。",
     "",
     "【文本与工具分工】",
     "1. 文本负责承接、解释和总结；结构化对象交给工具。",

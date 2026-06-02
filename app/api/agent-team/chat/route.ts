@@ -7,7 +7,13 @@ import { recordTreasureChatMessages } from "@/lib/analytics/treasure-hunt";
 import { pickAguiTools } from "@/lib/agent-team/agui/tools";
 import { getAgentById } from "@/lib/agent-team/agents/registry";
 import { buildSystemPrompt } from "@/lib/agent-team/agents/prompts";
+import { pickExternalTools } from "@/lib/agent-team/external-tools";
 import { buildRuntimeContext } from "@/lib/agent-team/runtime-context";
+import { recordDiagnosisChatMessages } from "@/lib/requirements-diagnosis/chat-messages";
+import {
+  resolveDiagnosisContext,
+  type DiagnosisResolution,
+} from "@/lib/requirements-diagnosis/chat-session";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -18,6 +24,7 @@ type ChatRequestBody = {
   conversationId?: string;
   visitorId?: string;
   timeZone?: string;
+  quizResultId?: string;
   messages?: UIMessage[];
 };
 
@@ -52,25 +59,29 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const conversationId = input.conversationId || input.id;
+    // 需求诊断对话必须绑定评测结果；普通 treasure-hunt 对话继续走原有会话记录逻辑。
+    const diagnosis = agent.id === "requirements-diagnosis" ? await resolveDiagnosisContext(user.id, input.quizResultId, input.conversationId || input.id) : null;
+    const conversationId = diagnosis?.conversationId || input.conversationId || input.id;
     const sessionId = request.cookies.get(AUTH_COOKIE_NAME)?.value;
 
-    if (conversationId) {
-      await recordTreasureChatMessages({
-        userId: user.id,
-        sessionId,
-        visitorId: input.visitorId,
-        conversationId,
-        messages,
-      });
-    }
+    await recordChatMessages({
+      userId: user.id,
+      sessionId,
+      visitorId: input.visitorId,
+      conversationId,
+      diagnosis,
+      messages,
+    });
 
     const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
-    const tools = pickAguiTools(agent.tools);
+    const tools = {
+      ...pickAguiTools(agent.tools),
+      ...pickExternalTools(agent.externalTools),
+    };
     const result = streamText({
       model: deepseek(model),
       system: [
-        { role: "system", content: buildSystemPrompt(agent) },
+        { role: "system", content: buildSystemPrompt(agent, diagnosis?.context) },
         { role: "system", content: buildRuntimeContext({ timeZone: input.timeZone }) },
       ],
       messages: await convertToModelMessages(compactUIMessages(messages), {
@@ -92,12 +103,12 @@ export async function POST(request: NextRequest) {
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
       onFinish: async ({ messages: finishedMessages }) => {
-        if (!conversationId) return;
-        await recordTreasureChatMessages({
+        await recordChatMessages({
           userId: user.id,
           sessionId,
           visitorId: input.visitorId,
           conversationId,
+          diagnosis,
           messages: finishedMessages,
         });
       },
@@ -106,6 +117,37 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "生成失败，请稍后再试。" }, { status: 500 });
   }
+}
+
+async function recordChatMessages(input: {
+  userId: string;
+  sessionId: string | undefined;
+  visitorId: string | undefined;
+  conversationId: string | undefined;
+  diagnosis: DiagnosisResolution | null;
+  messages: UIMessage[];
+}): Promise<void> {
+  if (!input.conversationId) {
+    return;
+  }
+
+  if (input.diagnosis) {
+    await recordDiagnosisChatMessages({
+      userId: input.userId,
+      chatSessionId: input.diagnosis.chatSessionId,
+      conversationId: input.conversationId,
+      messages: input.messages,
+    });
+    return;
+  }
+
+  await recordTreasureChatMessages({
+    userId: input.userId,
+    sessionId: input.sessionId,
+    visitorId: input.visitorId,
+    conversationId: input.conversationId,
+    messages: input.messages,
+  });
 }
 
 function compactUIMessages(messages: UIMessage[]): UIMessage[] {

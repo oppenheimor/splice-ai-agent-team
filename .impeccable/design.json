@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-29T00:00:00+08:00",
+  "title": "Design System: Splice Agent Team",
+  "extensions": {
+    "colorMeta": {
+      "platform-background": {
+        "role": "neutral",
+        "displayName": "Platform Warm Canvas",
+        "canonical": "oklch(0.985 0.004 75)",
+        "tonalRamp": [
+          "oklch(0.15 0.004 75)",
+          "oklch(0.28 0.004 75)",
+          "oklch(0.42 0.004 75)",
+          "oklch(0.56 0.004 75)",
+          "oklch(0.70 0.004 75)",
+          "oklch(0.84 0.004 75)",
+          "oklch(0.93 0.004 75)",
+          "oklch(0.985 0.004 75)"
+        ]
+      },
+      "deep-work-teal": {
+        "role": "primary",
+        "displayName": "Deep Work Teal",
+        "canonical": "oklch(0.32 0.05 198)",
+        "tonalRamp": [
+          "oklch(0.15 0.05 198)",
+          "oklch(0.25 0.05 198)",
+          "oklch(0.32 0.05 198)",
+          "oklch(0.45 0.05 198)",
+          "oklch(0.58 0.05 198)",
+          "oklch(0.72 0.05 198)",
+          "oklch(0.86 0.04 198)",
+          "oklch(0.95 0.025 198)"
+        ]
+      },
+      "consultant-ink": {
+        "role": "primary",
+        "displayName": "Consultant Ink",
+        "canonical": "#2e2f2d",
+        "tonalRamp": [
+          "#171817",
+          "#2e2f2d",
+          "#4a4b48",
+          "#686965",
+          "#8a8a86",
+          "#b6b6b1",
+          "#e8e8e4",
+          "#fffffc"
+        ]
+      },
+      "treasure-tide": {
+        "role": "primary",
+        "displayName": "Treasure Tide",
+        "canonical": "#19c8b9",
+        "tonalRamp": [
+          "#083d39",
+          "#0b746b",
+          "#0aa99e",
+          "#19c8b9",
+          "#3dd4c6",
+          "#82d5bb",
+          "#c7f0d7",
+          "#e6f9f6"
+        ]
+      },
+      "treasure-gold": {
+        "role": "secondary",
+        "displayName": "Treasure Gold",
+        "canonical": "#f7cd67",
+        "tonalRamp": [
+          "#5d4b2d",
+          "#806b4d",
+          "#b98f36",
+          "#f7cd67",
+          "#f6df8f",
+          "#fff2c1",
+          "#fff8df",
+          "#fffdf2"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Agent 首屏大标题、诊断入口标题和强品牌信号。"
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "页面标题、结果报告标题和主要分组标题。"
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "说明文本、Agent 输出和表单说明。"
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "徽章、按钮、表头和短状态。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "platform-soft",
+        "value": "0 1px 2px rgba(0,0,0,0.05)",
+        "purpose": "标准 shadcn 卡片、按钮和输入的默认层次。"
+      },
+      {
+        "name": "consultant-lift",
+        "value": "0 18px 50px rgba(0,0,0,0.08)",
+        "purpose": "需求诊断面板，用于低噪音的纸面浮起。"
+      },
+      {
+        "name": "treasure-press",
+        "value": "0 4px 0 #d8c8a2",
+        "purpose": "寻宝按钮和历史项，用于可按压的道具感。"
+      },
+      {
+        "name": "treasure-card-lift",
+        "value": "0 8px 0 rgba(114,93,66,0.16), 0 18px 36px rgba(93,75,45,0.12)",
+        "purpose": "寻宝 Hero 和消息卡，用于游戏场景中的重点容器。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-fast",
+        "value": "150ms ease-out",
+        "purpose": "按钮、导航和选项的颜色状态变化。"
+      },
+      {
+        "name": "drawer-standard",
+        "value": "300ms ease-out",
+        "purpose": "移动端历史抽屉和面板进入。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Platform Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "平台层默认主动作，安静可靠，不用于 Agent 领域装饰。",
+      "html": "<button class=\"ds-platform-primary\">发送</button>",
+      "css": ".ds-platform-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 8px 16px; border: 0; border-radius: 8px; background: oklch(0.32 0.05 198); color: oklch(0.985 0.004 75); font: 600 14px/1 Avenir Next, Optima, ui-sans-serif, system-ui, sans-serif; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 150ms ease-out, box-shadow 150ms ease-out; } .ds-platform-primary:hover { background: oklch(0.28 0.05 198); } .ds-platform-primary:focus-visible { outline: 2px solid oklch(0.32 0.05 198); outline-offset: 2px; } .ds-platform-primary:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Platform Input",
+      "kind": "input",
+      "refersTo": "input-standard",
+      "description": "平台表单和聊天输入的标准字段。",
+      "html": "<input class=\"ds-platform-input\" placeholder=\"和 Agent 说说你的目标...\" />",
+      "css": ".ds-platform-input { width: 100%; height: 40px; padding: 8px 12px; border: 1px solid oklch(0.88 0.01 255); border-radius: 8px; background: oklch(0.985 0.004 75); color: oklch(0.18 0.02 260); font: 400 14px/1.4 Avenir Next, Optima, ui-sans-serif, system-ui, sans-serif; box-shadow: none; transition: border-color 150ms ease-out, box-shadow 150ms ease-out; } .ds-platform-input::placeholder { color: oklch(0.45 0.02 260); } .ds-platform-input:focus-visible { outline: none; border-color: oklch(0.32 0.05 198); box-shadow: 0 0 0 2px color-mix(in oklch, oklch(0.32 0.05 198) 24%, transparent); } .ds-platform-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Platform Card",
+      "kind": "card",
+      "refersTo": "card-standard",
+      "description": "平台默认信息容器，适用于首页、后台和通用聊天壳。",
+      "html": "<article class=\"ds-platform-card\"><h3>当前状态</h3><p>进入 Agent 页面前需要先登录。</p></article>",
+      "css": ".ds-platform-card { max-width: 320px; padding: 24px; border: 1px solid oklch(0.88 0.01 255); border-radius: 12px; background: oklch(1 0 0); color: oklch(0.18 0.02 260); box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-family: Avenir Next, Optima, ui-sans-serif, system-ui, sans-serif; } .ds-platform-card h3 { margin: 0; font-size: 20px; line-height: 1.25; font-weight: 600; } .ds-platform-card p { margin: 8px 0 0; color: oklch(0.45 0.02 260); font-size: 14px; line-height: 1.6; }"
+    },
+    {
+      "name": "Diagnosis Primary Button",
+      "kind": "button",
+      "refersTo": "diagnosis-primary-button",
+      "description": "需求诊断里的主行动，像顾问给出的明确下一步。",
+      "html": "<button class=\"ds-diagnosis-primary\">开始评测</button>",
+      "css": ".ds-diagnosis-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 14px 24px; border: 0; border-radius: 9999px; background: #2e2f2d; color: #fffffc; font: 900 14px/1 Avenir Next, Optima, ui-sans-serif, system-ui, sans-serif; box-shadow: 0 14px 26px rgba(46,47,45,0.18); transition: background-color 150ms ease-out, transform 150ms ease-out; } .ds-diagnosis-primary:hover { background: #1f201f; } .ds-diagnosis-primary:focus-visible { outline: 2px solid #2e2f2d; outline-offset: 3px; } .ds-diagnosis-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Diagnosis Metric Tile",
+      "kind": "card",
+      "description": "需求诊断入口中的步骤或维度提示。",
+      "html": "<article class=\"ds-diagnosis-metric\"><span>01</span><div><strong>五维商业画像</strong><small>照出你的决策底色。</small></div></article>",
+      "css": ".ds-diagnosis-metric { display: flex; align-items: center; gap: 16px; padding: 16px; border-radius: 24px; background: #f0f0ed; color: #222322; box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 8px 18px rgba(0,0,0,0.04); font-family: Avenir Next, Optima, ui-sans-serif, system-ui, sans-serif; } .ds-diagnosis-metric span { color: #2e2f2d; font-size: 20px; font-weight: 900; } .ds-diagnosis-metric strong { display: block; font-size: 14px; font-weight: 900; } .ds-diagnosis-metric small { display: block; margin-top: 4px; color: #8a8a86; font-size: 12px; line-height: 1.5; }"
+    },
+    {
+      "name": "Treasure Action Button",
+      "kind": "button",
+      "refersTo": "treasure-action-button",
+      "description": "寻宝游戏里的可按压动作按钮，有道具触感但保持可读。",
+      "html": "<button class=\"ds-treasure-action\">开始设计</button>",
+      "css": ".ds-treasure-action { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 14px; border: 2px solid #aaa69d; border-radius: 9999px; background: #fff8df; color: #725d42; font: 900 15px/1 Avenir Next, Optima, ui-sans-serif, system-ui, sans-serif; box-shadow: 0 4px 0 #d8c8a2; transition: transform 150ms ease-out, box-shadow 150ms ease-out, background-color 150ms ease-out; } .ds-treasure-action:hover { background: #fffdf2; } .ds-treasure-action:focus-visible { outline: 2px solid #19c8b9; outline-offset: 3px; } .ds-treasure-action:active { transform: translateY(2px); box-shadow: 0 2px 0 #d8c8a2; }"
+    },
+    {
+      "name": "Treasure Result Card",
+      "kind": "card",
+      "description": "寻宝工具输出的结果容器，用暖色纸面和低位阴影承载计划内容。",
+      "html": "<article class=\"ds-treasure-result\"><span>#1</span><h3>线索路线</h3><p>把每一步变成可执行的小惊喜。</p></article>",
+      "css": ".ds-treasure-result { width: 100%; max-width: 360px; padding: 20px; border: 2px solid rgba(114,93,66,0.14); border-radius: 28px; background: #fffdf2; color: #725d42; box-shadow: 0 5px 0 rgba(114,93,66,0.14); font-family: Avenir Next, Optima, ui-sans-serif, system-ui, sans-serif; } .ds-treasure-result span { display: inline-flex; padding: 4px 12px; border-radius: 9999px; background: rgba(255,248,223,0.55); color: #0b746b; font-size: 12px; font-weight: 900; } .ds-treasure-result h3 { margin: 14px 0 0; font-size: 18px; line-height: 1.2; font-weight: 900; } .ds-treasure-result p { margin: 8px 0 0; color: #8f806b; font-size: 15px; line-height: 1.7; font-weight: 500; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "分形工作台",
+    "overview": "Splice Agent Team 是一个产品型多 Agent 工作台：平台层保持安静、可靠、可扩展，每个 Agent 像分形一样从同一套底座长出自己的界面节奏、语气和结果呈现。统一性来自聊天底座、工具渲染、组件状态和可访问性；差异化来自 Agent 的任务场景、空状态、结构化输出和局部色彩策略。",
+    "keyCharacteristics": [
+      "平台层 restrained：浅暖背景、深青主动作、轻边框、稳定控件。",
+      "Agent 层 contextual：需求诊断用墨黑和纸面层次，寻宝游戏用潮青、奶油纸和 3D 压层阴影。",
+      "色彩复杂度受控：每个主要界面核心色调不超过 3 种，标签、状态色、图表辅助色除外。",
+      "组件一致但允许换肤：按钮、输入、卡片和消息壳保持交互语法一致，Agent 可以覆盖形状、阴影和语气。"
+    ],
+    "rules": [
+      {
+        "name": "The Three-Tone Rule",
+        "body": "单个主要界面的核心色调最多 3 种。状态色、标签色和图表辅助色可以存在，但不能成为视觉主角。",
+        "section": "colors"
+      },
+      {
+        "name": "The Agent Earns Color Rule",
+        "body": "平台层不抢色。只有当 Agent 的任务语境需要时，才引入领域色和更强的形状语言。",
+        "section": "colors"
+      },
+      {
+        "name": "The Product Voice Rule",
+        "body": "平台控件不使用 display 字体效果。标签、按钮、输入和表格文字必须先可读，再谈风格。",
+        "section": "typography"
+      },
+      {
+        "name": "The Agent Accent Rule",
+        "body": "Agent 可以调整字重、斜体和标题节奏，但不能让字体变化成为主要差异化手段。",
+        "section": "typography"
+      },
+      {
+        "name": "The State Makes Depth Rule",
+        "body": "平台默认静止，不用夸张阴影。只有 hover、active、focus 或 Agent 语境需要时，才增加明显层次。",
+        "section": "elevation"
+      },
+      {
+        "name": "The Tactile Only In Treasure Rule",
+        "body": "3D 压层阴影属于寻宝 Agent，不迁移到需求诊断或后台页面。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do 让平台层保持克制：浅背景、深青主动作、轻边框、标准控件。",
+      "Do 让每个 Agent 的差异来自任务结构、空状态、工具 renderer 和结果呈现。",
+      "Do 在单个主要界面内控制核心色调不超过 3 种，标签、状态色和图表辅助色除外。",
+      "Do 为按钮、输入、选项和消息提供 hover、focus、active、disabled 或 loading 状态。",
+      "Do 在需求诊断里使用纸面层次、顾问墨黑、明确步骤和可解释结果。",
+      "Do 在寻宝游戏里使用奶油纸、潮青、礼物金和可按压阴影，但保持文本清楚可读。",
+      "Do 保持 WCAG AA 目标：颜色不作为唯一信息载体，焦点状态可见，错误提示有文本。"
+    ],
+    "donts": [
+      "Don't 做成传统企业后台感：冷硬、拥挤、只有表单和表格。",
+      "Don't 套用泛化 SaaS landing 模板：大标题、指标卡、渐变装饰和重复卡片网格。",
+      "Don't 儿童化。寻宝游戏 Agent 要有礼物策划和仪式设计的精致感，不要低龄玩具感。",
+      "Don't 使用过度赛博、霓虹或 AI 炫技。智能应体现在追问质量、结构化输出和行动建议里。",
+      "Don't 做成 Apple 风极简模板。简洁不能牺牲任务密度、领域信息和决策线索。",
+      "Don't 使用 border-left 或 border-right 大于 1px 的侧边彩条作为卡片、列表或提示的装饰。",
+      "Don't 使用渐变文字、默认玻璃拟态、装饰性页面加载动效或无意义弹窗。"
+    ]
+  }
+}

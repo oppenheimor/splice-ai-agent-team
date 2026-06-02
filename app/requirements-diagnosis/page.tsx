@@ -1,39 +1,90 @@
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { ArrowRight, History } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  diagnosisAppSurface,
+  diagnosisBottomActions,
+  diagnosisHero,
+  diagnosisHeroEyebrow,
+  diagnosisHeroTitle,
+  diagnosisMetric,
+  diagnosisMutedText,
+  diagnosisPrimaryButton,
+  diagnosisSecondaryButton,
+  diagnosisStage,
+  diagnosisShell,
+} from "@/components/requirements-diagnosis/styles";
 
 export default async function RequirementsDiagnosisPage() {
-  const user = await requireUser();
+  await requireUser();
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-emerald-50/50 via-background to-background px-6 py-8 text-foreground">
-      <section className="mx-auto flex w-full max-w-5xl flex-col gap-12">
-        <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="text-sm font-semibold tracking-tight text-foreground">
-            Splice Agent Team
-          </Link>
-          <form action="/agent-team/api/auth/logout" method="post">
-            <Button variant="outline" type="submit">
-              <LogOut className="h-4 w-4" />
-              退出
-            </Button>
-          </form>
-        </div>
+    <main className={diagnosisShell}>
+      <section className={diagnosisStage}>
+        <div className={diagnosisAppSurface}>
+          <div className="flex flex-1 flex-col">
+            <section className={`mt-6 ${diagnosisHero}`}>
+              <p className={diagnosisHeroEyebrow}>AI 需求诊断</p>
+              <h1 className={diagnosisHeroTitle}>
+                <span className="block">你的 AI 转型，</span>
+                <span className="block">从照见自己开始</span>
+              </h1>
+              <p className={`mt-2 text-sm leading-7 ${diagnosisMutedText}`}>
+                13 道题，找到你的 AI 转型切入点。
+              </p>
+            </section>
 
-        <Card className="border-border/70 bg-card/90 shadow-sm">
-          <CardHeader className="space-y-2">
-            <CardDescription>受保护页面</CardDescription>
-            <CardTitle className="text-4xl sm:text-6xl">需求诊断 Agent</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
-              当前 V1 已通过服务端 session 识别登录用户：<strong className="text-foreground">{user.displayName}</strong>。cookie 里只保存 sessionId，
-              用户信息来自 PostgreSQL。
-            </p>
-          </CardContent>
-        </Card>
+            <div className="mt-8 grid gap-2.5">
+              {[
+                ["01", "五维商业画像", "照出你的决策底色。"],
+                ["02", "AI 实践定位", "找到你的真实起点。"],
+                ["03", "1V1 AI 深度诊断", "开启你的行动路径。"],
+              ].map(([no, title, description]) => (
+                <div
+                  key={title}
+                  className={`${diagnosisMetric} flex items-center gap-4 p-4`}
+                >
+                  <span className="text-xl font-black text-[#2e2f2d]">
+                    {no}
+                  </span>
+                  <span>
+                    <strong className="block text-sm font-black">
+                      {title}
+                    </strong>
+                    <small className={`block ${diagnosisMutedText}`}>
+                      {description}
+                    </small>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className={diagnosisBottomActions}>
+              <Button
+                asChild
+                size="lg"
+                className={`h-14 text-sm font-bold ${diagnosisPrimaryButton}`}
+              >
+                <Link href="/requirements-diagnosis/quiz">
+                  开始评测
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className={`h-12 text-sm font-bold ${diagnosisSecondaryButton}`}
+              >
+                <Link href="/requirements-diagnosis/history">
+                  <History className="h-4 w-4" />
+                  查看历史
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
   );

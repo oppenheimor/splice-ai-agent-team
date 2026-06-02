@@ -5,6 +5,18 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
+type DataTableColumn = {
+  key: string;
+  label?: string;
+};
+
+type FrameworkNode = {
+  title: string;
+  description?: string;
+  status?: string;
+  items?: string[];
+};
+
 export function ComparisonTool({ data }: { data: any }) {
   const criteria = Array.isArray(data?.criteria) ? data.criteria : [];
   const options = Array.isArray(data?.options) ? data.options : [];
@@ -112,6 +124,85 @@ export function ScorecardTool({ data }: { data: any }) {
   );
 }
 
+export function DataTableTool({ data }: { data: unknown }) {
+  const tableData = isRecord(data) ? data : {};
+  const columns = Array.isArray(tableData.columns)
+    ? tableData.columns.filter(isDataTableColumn)
+    : [];
+  const rows = Array.isArray(tableData.rows)
+    ? tableData.rows.filter(isRecord)
+    : [];
+
+  return (
+    <Card className="mt-3 overflow-hidden border-border/70 bg-background/80">
+      <div className="p-4">
+        <AguiHeader
+          title={getOptionalString(tableData.title) || "数据表"}
+          description={getOptionalString(tableData.description)}
+        />
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] border-t border-border text-sm">
+          <thead className="bg-muted/70">
+            <tr>
+              {columns.map((column) => (
+                <th key={column.key} className="border-b border-border px-3 py-2 text-left font-semibold">
+                  {column.label || column.key}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={index} className="odd:bg-card/50">
+                {columns.map((column) => (
+                  <td key={column.key} className="border-b border-border px-3 py-2 text-muted-foreground">
+                    {String(row?.[column.key] ?? "-")}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+export function FrameworkTool({ data }: { data: unknown }) {
+  const frameworkData = isRecord(data) ? data : {};
+  const nodes = Array.isArray(frameworkData.nodes)
+    ? frameworkData.nodes.filter(isFrameworkNode)
+    : [];
+
+  return (
+    <Card className="mt-3 border-border/70 bg-background/80 p-4">
+      <AguiHeader
+        title={getOptionalString(frameworkData.title) || "诊断框架"}
+        description={getOptionalString(frameworkData.description)}
+      />
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        {nodes.map((node, index) => (
+          <article key={`${node.title}-${index}`} className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <strong className="text-sm font-semibold">{node.title}</strong>
+              {node.status ? <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{node.status}</span> : null}
+            </div>
+            {node.description ? <p className="mt-2 text-sm leading-6 text-muted-foreground">{node.description}</p> : null}
+            {node.items?.length ? (
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                {node.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : null}
+          </article>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export function GenericTool({ part, toolName }: { part: ToolPartShape; toolName: string }) {
   return (
     <Card className="mt-3 border-border/70 bg-background/80 p-4">
@@ -131,4 +222,24 @@ function AguiHeader({ title, description }: { title: string; description?: strin
       {description ? <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p> : null}
     </div>
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isDataTableColumn(value: unknown): value is DataTableColumn {
+  return isRecord(value) && typeof value.key === "string";
+}
+
+function isFrameworkNode(value: unknown): value is FrameworkNode {
+  return (
+    isRecord(value) &&
+    typeof value.title === "string" &&
+    (value.items === undefined || (Array.isArray(value.items) && value.items.every((item) => typeof item === "string")))
+  );
+}
+
+function getOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
 }

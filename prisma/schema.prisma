@@ -17,8 +17,72 @@ model User {
   sessions        Session[]
   analyticsEvents TreasureAnalyticsEvent[]
   chatMessages    TreasureChatMessage[]
+  diagnosisResults DiagnosisQuizResult[]
+  diagnosisChatSessions DiagnosisChatSession[]
+  diagnosisChatMessages DiagnosisChatMessage[]
 
   @@map("users")
+}
+
+model DiagnosisQuizResult {
+  id                String                 @id @default(cuid())
+  userId            String                 @map("user_id")
+  answers           Json
+  dimensionScores   Json                   @map("dimension_scores")
+  operatorCode      String                 @map("operator_code")
+  operatorTypeName  String                 @map("operator_type_name")
+  aiAdoptionStage   String                 @map("ai_adoption_stage")
+  userType          String                 @map("user_type")
+  cognitiveWidth    String                 @map("cognitive_width")
+  blindSpots        Json                   @map("blind_spots")
+  justNeed          String                 @map("just_need")
+  crowdType         String                 @map("crowd_type")
+  enhancedNarrative Json?                  @map("enhanced_narrative")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatSession       DiagnosisChatSession?
+
+  @@index([userId, createdAt])
+  @@map("diagnosis_quiz_results")
+}
+
+model DiagnosisChatSession {
+  id            String              @id @default(cuid())
+  userId        String              @map("user_id")
+  quizResultId  String              @unique @map("quiz_result_id")
+  conversationId String?            @unique @map("conversation_id")
+  status        String              @default("active")
+  lastMessageAt DateTime            @default(now()) @map("last_message_at")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizResult    DiagnosisQuizResult @relation(fields: [quizResultId], references: [id], onDelete: Cascade)
+  messages      DiagnosisChatMessage[]
+
+  @@index([userId, lastMessageAt])
+  @@map("diagnosis_chat_sessions")
+}
+
+model DiagnosisChatMessage {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  chatSessionId  String   @map("chat_session_id")
+  conversationId String   @map("conversation_id")
+  messageId      String   @map("message_id")
+  role           String
+  text           String?
+  parts          Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatSession    DiagnosisChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, messageId])
+  @@index([userId, createdAt])
+  @@index([chatSessionId, createdAt])
+  @@index([conversationId, createdAt])
+  @@map("diagnosis_chat_messages")
 }
 
 model Session {

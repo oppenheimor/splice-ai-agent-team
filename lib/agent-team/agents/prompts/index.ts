@@ -1,10 +1,23 @@
 import { buildAguiPrompt } from "@/lib/agent-team/agui/tools";
 import type { AgentManifest } from "@/lib/agent-team/agents/types";
 import { buildTreasureHuntPrompt } from "./treasure-hunt";
+import {
+  buildRequirementsDiagnosisPrompt,
+  type DiagnosisContext,
+} from "./requirements-diagnosis";
 
-export function buildSystemPrompt(agent: AgentManifest): string {
+export type { DiagnosisContext };
+
+export function buildSystemPrompt(
+  agent: AgentManifest,
+  diagnosis?: DiagnosisContext | null,
+): string {
   if (agent.promptBuilder === "treasureHunt") {
     return buildTreasureHuntPrompt(agent);
+  }
+
+  if (agent.promptBuilder === "requirementsDiagnosis") {
+    return buildRequirementsDiagnosisPrompt(agent, diagnosis);
   }
 
   return [

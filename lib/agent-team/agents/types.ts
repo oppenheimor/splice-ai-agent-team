@@ -8,13 +8,21 @@ export type AgentToolName =
   | "showChecklist"
   | "showTimeline"
   | "showScorecard"
+  | "showDataTable"
+  | "showFramework"
   | "showGiftList"
   | "showWishCard"
   | "showVideoScript";
 
 export type RendererProfile = "default" | "treasure-hunt";
 
-export type PromptBuilderName = "generic" | "treasureHunt";
+export type PromptBuilderName =
+  | "generic"
+  | "treasureHunt"
+  | "requirementsDiagnosis";
+
+/** 外部能力工具名称（区别于 AGUI 交互工具） */
+export type ExternalToolName = "webSearch"; // 未来可扩展：industryReport, competitorAnalysis 等
 
 export type MemoryPolicy = {
   mode: "session" | "none";
@@ -35,6 +43,8 @@ export type AgentManifest = {
   version: string;
   starterPrompts: string[];
   tools: AgentToolName[];
+  /** 外部能力工具（webSearch 等），由后端注册到 AI SDK tool 集合 */
+  externalTools?: ExternalToolName[];
   rendererProfile: RendererProfile;
   promptBuilder: PromptBuilderName;
   memoryPolicy?: MemoryPolicy;
