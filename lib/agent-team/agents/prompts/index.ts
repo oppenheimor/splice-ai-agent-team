@@ -1,5 +1,6 @@
 import { buildAguiPrompt } from "@/lib/agent-team/agui/tools";
 import type { AgentManifest } from "@/lib/agent-team/agents/types";
+import { buildDeepDiagnosisPrompt } from "./deep-diagnosis";
 import { buildTreasureHuntPrompt } from "./treasure-hunt";
 import {
   buildRequirementsDiagnosisPrompt,
@@ -14,6 +15,10 @@ export function buildSystemPrompt(
 ): string {
   if (agent.promptBuilder === "treasureHunt") {
     return buildTreasureHuntPrompt(agent);
+  }
+
+  if (agent.promptBuilder === "deepDiagnosis") {
+    return buildDeepDiagnosisPrompt(agent, diagnosis);
   }
 
   if (agent.promptBuilder === "requirementsDiagnosis") {

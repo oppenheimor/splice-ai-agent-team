@@ -59,12 +59,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // 需求诊断对话必须绑定评测结果；普通 treasure-hunt 对话继续走原有会话记录逻辑。
-    const diagnosis = agent.id === "requirements-diagnosis" ? await resolveDiagnosisContext(user.id, input.quizResultId, input.conversationId || input.id) : null;
+    // 深度诊断可以从评测结果页带上下文进入，也可以作为独立产品直接冷启动。
+    const diagnosis = agent.id === "deep-diagnosis" && input.quizResultId
+      ? await resolveDiagnosisContext(user.id, input.quizResultId, input.conversationId || input.id)
+      : null;
     const conversationId = diagnosis?.conversationId || input.conversationId || input.id;
     const sessionId = request.cookies.get(AUTH_COOKIE_NAME)?.value;
 
     await recordChatMessages({
+      agentId: agent.id,
       userId: user.id,
       sessionId,
       visitorId: input.visitorId,
@@ -104,6 +107,7 @@ export async function POST(request: NextRequest) {
       originalMessages: messages,
       onFinish: async ({ messages: finishedMessages }) => {
         await recordChatMessages({
+          agentId: agent.id,
           userId: user.id,
           sessionId,
           visitorId: input.visitorId,
@@ -120,6 +124,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function recordChatMessages(input: {
+  agentId: string;
   userId: string;
   sessionId: string | undefined;
   visitorId: string | undefined;
@@ -138,6 +143,10 @@ async function recordChatMessages(input: {
       conversationId: input.conversationId,
       messages: input.messages,
     });
+    return;
+  }
+
+  if (input.agentId !== "treasure-hunt") {
     return;
   }
 

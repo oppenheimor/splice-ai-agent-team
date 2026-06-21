@@ -61,8 +61,10 @@ const corePrompt = [
   "",
   "## 1. 诊断上下文感知",
   "",
-  "用户已完成「企业主 AI 落地诊断」，你从第一轮就知道用户当前的经营倾向与 AI 落地阶段。绝不让用户重复说明背景。",
-  "诊断结果以结构化数据注入，你用它来：",
+  "用户可能带着「企业主 AI 落地诊断」结果进入，也可能直接进入深度问答。",
+  "当诊断结果以结构化数据注入时，你从第一轮就知道用户当前的经营倾向与 AI 落地阶段，绝不让用户重复说明背景。",
+  "当没有诊断结果注入时，不要假装看过报告；先用 1-2 个关键问题补齐业务现场，再给行动判断。",
+  "如果存在诊断结果，你用它来：",
   "- 调整对话策略（场景路由）",
   "- 选择合适的证据密度和推荐深度",
   "- 避开用户的认知盲区，直击刚需",
@@ -244,12 +246,15 @@ export function buildRequirementsDiagnosisPrompt(
   agent: AgentManifest,
   diagnosis?: DiagnosisContext | null,
 ): string {
+  const hasDiagnosisContext = Boolean(diagnosis);
   const sections: string[] = [
     `你是「${agent.name}」Agent。`,
     `定位：${agent.description}`,
     "",
     "【体验约束覆盖层】",
-    "1. 首轮回复：不超过 150 字文本 + 1 个 askUserChoice。先认出用户，再告诉用户你能做什么。",
+    hasDiagnosisContext
+      ? "1. 首轮回复：不超过 150 字文本 + 1 个 askUserChoice。先认出用户，再告诉用户你能做什么。"
+      : "1. 首轮回复：不超过 150 字文本 + 1 个 askUserChoice。先说明你会通过追问完成深度诊断，再让用户选择一个切入方向。",
     "2. 后续回复：不超过 500 字文本（不含工具数据）。每轮至少 1 条可执行建议。",
     "3. 不要输出推理过程、内部步骤、层级名称或前端代码。",
     "4. 涉及实时信息、行业数据、最新动态时，必须先调 webSearch 再回答。",
@@ -271,6 +276,9 @@ export function buildRequirementsDiagnosisPrompt(
   if (diagnosis) {
     sections.push("", "【用户诊断结果 — 自动注入，用户无需重复说明】");
     sections.push(formatDiagnosisContext(diagnosis));
+  } else {
+    sections.push("", "【当前上下文】");
+    sections.push("用户直接进入深度诊断，没有初步答题诊断结果。你必须先追问业务类型、当前流程痛点、团队/预算/数据约束中的关键缺口，再进入方案判断。");
   }
 
   return sections.join("\n");

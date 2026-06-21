@@ -13,6 +13,7 @@ import {
   DataTableTool,
   FrameworkTool,
   GenericTool,
+  PublishHtmlReportTool,
   ScorecardTool,
   TimelineTool,
 } from "./tool-renderers";
@@ -91,6 +92,7 @@ function ToolPart({
   if (toolName === "showScorecard") return part.state === "output-available" ? <ScorecardTool data={part.output || part.input} /> : <ToolLoading label="正在生成评分卡" />;
   if (toolName === "showDataTable") return part.state === "output-available" ? <DataTableTool data={part.output || part.input} /> : <ToolLoading label="正在生成数据表" />;
   if (toolName === "showFramework") return part.state === "output-available" ? <FrameworkTool data={part.output || part.input} /> : <ToolLoading label="正在生成诊断框架" />;
+  if (toolName === "publishHtmlReport") return part.state === "output-available" ? <PublishHtmlReportTool data={part.output || part.input} /> : <ToolLoading label="正在生成完整方案链接" />;
 
   return <GenericTool part={part} toolName={toolName} />;
 }

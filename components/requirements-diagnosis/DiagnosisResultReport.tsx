@@ -41,6 +41,7 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
     .slice(0, 3);
   const operatorAvatar = getOperatorAvatar(result.operatorTypeName);
   const showFloatingAction = Boolean(recordId) && scrollProgress >= 0.3 && scrollProgress < 0.8 && !isBottomActionNear;
+  const deepDiagnosisHref = recordId ? `/deep-diagnosis/chat/${recordId}?sourceResultId=${recordId}` : "/deep-diagnosis";
 
   useEffect(() => {
     function updateFloatingAction() {
@@ -167,7 +168,7 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
           <div ref={bottomActionsRef} className={`${diagnosisBottomActions} !mt-7 grid-cols-1 gap-2 !pb-[env(safe-area-inset-bottom)] md:grid-cols-2`}>
             {recordId ? (
               <Button asChild className={`h-[52px] text-sm font-bold shadow-none ${diagnosisPrimaryButton}`}>
-                <Link href={`/requirements-diagnosis/chat/${recordId}`}>
+                <Link href={deepDiagnosisHref}>
                   深度诊断
                   <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -181,7 +182,7 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
           {showFloatingAction ? (
             <div className="fixed bottom-5 right-4 z-20 md:hidden">
               <Link
-                href={`/requirements-diagnosis/chat/${recordId}`}
+                href={deepDiagnosisHref}
                 className="group flex items-center gap-2 rounded-full border border-[#2e2f2d]/10 bg-[#fffffc]/92 px-4 py-3 text-sm font-black text-[#2e2f2d] shadow-[0_12px_28px_rgba(0,0,0,0.12)] backdrop-blur transition hover:bg-[#f7f7f3]"
               >
                 <span className="h-2 w-2 rounded-full bg-[#277652]" />

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, LogOut, SearchCheck, Sparkles } from "lucide-react";
+import { ArrowRight, LogOut, MessageSquareText, SearchCheck, Sparkles } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,12 @@ export default async function Home() {
               <SearchCheck className="h-4 w-4" />
               打开需求诊断 Agent
               <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild variant="secondary" className="h-11">
+            <Link href="/deep-diagnosis">
+              <MessageSquareText className="h-4 w-4" />
+              打开深度诊断 Agent
             </Link>
           </Button>
           <Button asChild variant="secondary" className="h-11">

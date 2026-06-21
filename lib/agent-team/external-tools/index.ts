@@ -1,8 +1,10 @@
 import type { ToolSet } from "ai";
 import type { ExternalToolName } from "@/lib/agent-team/agents/types";
+import { publishHtmlReportTool } from "./publish-html-report";
 import { webSearchTool } from "./web-search";
 
 const externalTools = {
+  publishHtmlReport: publishHtmlReportTool,
   webSearch: webSearchTool,
 };
 

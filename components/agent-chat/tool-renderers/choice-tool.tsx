@@ -26,7 +26,7 @@ export function ChoiceTool({
   addToolOutput: ChatAddToolOutputFunction<UIMessage>;
 }) {
   const input = part.input || {};
-  const options = Array.isArray(input.options) ? (input.options as ChoiceOption[]) : [];
+  const options = normalizeChoiceOptions(input.options);
   const mode = input.mode === "multiple" ? "multiple" : "single";
   const allowOther = input.allowOther !== false;
   const [selected, setSelected] = useState<string[]>([]);
@@ -147,4 +147,37 @@ export function ChoiceTool({
       </Button>
     </Card>
   );
+}
+
+function normalizeChoiceOptions(value: unknown): ChoiceOption[] {
+  if (!Array.isArray(value)) return [];
+
+  const usedIds = new Set<string>();
+
+  return value.map((rawOption, index) => {
+    const option = typeof rawOption === "object" && rawOption !== null
+      ? rawOption as Partial<ChoiceOption> & { value?: unknown }
+      : { label: String(rawOption) };
+    const baseId = String(option.id || option.value || option.label || `option-${index}`);
+    const id = toUniqueOptionId(baseId, index, usedIds);
+
+    return {
+      id,
+      label: String(option.label || option.id || option.value || `选项 ${index + 1}`),
+      description: option.description ? String(option.description) : undefined,
+      disabled: Boolean(option.disabled),
+    };
+  });
+}
+
+function toUniqueOptionId(baseId: string, index: number, usedIds: Set<string>): string {
+  const normalized = baseId.trim() || `option-${index}`;
+  if (!usedIds.has(normalized)) {
+    usedIds.add(normalized);
+    return normalized;
+  }
+
+  const fallback = `${normalized}-${index}`;
+  usedIds.add(fallback);
+  return fallback;
 }

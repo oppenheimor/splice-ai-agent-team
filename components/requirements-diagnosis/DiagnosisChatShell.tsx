@@ -5,6 +5,7 @@ import { ArrowLeft, Bot, ClipboardCheck, MessageSquareText, SearchCheck, Send, S
 import { useEffect, useMemo, useRef } from "react";
 import type { AgentManifest } from "@/lib/agent-team/agents/types";
 import { useAgentChat } from "@/lib/agent-team/chat/useAgentChat";
+import type { DiagnosisResult } from "@/lib/requirements-diagnosis/types";
 import type { DiagnosisRecordDto } from "@/lib/requirements-diagnosis/persistence";
 import { MessagePartsRenderer } from "@/components/agent-chat/MessagePartsRenderer";
 import { Button } from "@/components/ui/button";
@@ -27,14 +28,16 @@ import {
 
 type DiagnosisChatShellProps = {
   agent: AgentManifest;
-  diagnosis: DiagnosisRecordDto;
+  conversationId: string;
+  sourceDiagnosis?: DiagnosisRecordDto | null;
 };
 
-export function DiagnosisChatShell({ agent, diagnosis }: DiagnosisChatShellProps) {
-  const requestBody = useMemo(() => ({ quizResultId: diagnosis.id }), [diagnosis.id]);
+export function DiagnosisChatShell({ agent, conversationId, sourceDiagnosis }: DiagnosisChatShellProps) {
+  const diagnosis = sourceDiagnosis;
+  const requestBody = useMemo(() => (diagnosis ? { quizResultId: diagnosis.id } : undefined), [diagnosis]);
   const chat = useAgentChat(agent, {
     // 需求诊断的对话必须与评测结果一一绑定，避免复用同一 Agent 的历史本地会话导致 DB conversationId 唯一键冲突。
-    conversationId: diagnosis.chatSession?.conversationId || `diagnosis-${diagnosis.id}`,
+    conversationId: diagnosis?.chatSession?.conversationId || conversationId,
     requestBody,
   });
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -49,23 +52,25 @@ export function DiagnosisChatShell({ agent, diagnosis }: DiagnosisChatShellProps
         <article className={`${diagnosisAppSurface} overflow-hidden`}>
           <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
             <header>
-              <Link href="/requirements-diagnosis/history" className={diagnosisIconButton} aria-label="返回评测历史">
+              <Link href="/deep-diagnosis" className={diagnosisIconButton} aria-label="返回深度诊断首页">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
               <div className="text-center">
                 <strong className={`block text-lg leading-tight ${diagnosisSerif}`}>{agent.name}</strong>
-                <small className={diagnosisMutedText}>{diagnosis.result.operatorTypeName}</small>
+                <small className={diagnosisMutedText}>{diagnosis ? diagnosis.result.operatorTypeName : "独立问答诊断"}</small>
               </div>
-              <Link href={`/requirements-diagnosis/result?id=${diagnosis.id}`} className={diagnosisIconButton} aria-label="查看完整报告">
-                <MessageSquareText className="h-4 w-4" />
-              </Link>
+              {diagnosis ? (
+                <Link href={`/requirements-diagnosis/result?id=${diagnosis.id}`} className={diagnosisIconButton} aria-label="查看完整报告">
+                  <MessageSquareText className="h-4 w-4" />
+                </Link>
+              ) : (
+                <Link href="/requirements-diagnosis/quiz" className={diagnosisIconButton} aria-label="先做初步答题诊断">
+                  <ClipboardCheck className="h-4 w-4" />
+                </Link>
+              )}
             </header>
 
-            <div className={`${diagnosisPanel} mt-5 grid gap-3 p-4 shadow-none lg:grid-cols-3`}>
-              <MetricLine label="AI 落地阶段" value={`${diagnosis.result.aiAdoptionStage} · ${diagnosis.result.aiAdoptionStageLabel}`} />
-              <MetricLine label="关注偏好" value={diagnosis.result.userTypeLabel} />
-              <MetricLine label="刚需方向" value={diagnosis.result.justNeedLabel} />
-            </div>
+            {diagnosis ? <DiagnosisContextPanel result={diagnosis.result} /> : <ColdStartContextPanel />}
 
             <section className="mt-6 min-h-0 space-y-4 overflow-auto pr-1">
               {chat.messages.length === 0 ? (
@@ -151,18 +156,28 @@ function ChatMessage({
   );
 }
 
-function EmptyState({ diagnosis, onStart }: { diagnosis: DiagnosisRecordDto; onStart: (text: string) => void }) {
-  const prompts = [
+function EmptyState({ diagnosis, onStart }: { diagnosis?: DiagnosisRecordDto | null; onStart: (text: string) => void }) {
+  const prompts = diagnosis ? [
     "结合我的诊断结果，帮我找出最适合先做 AI 改造的业务环节。",
     "帮我做一份本月可执行的企业 AI 转型路线图。",
     "请评估我现在做 AI 自动化项目的风险和优先级。",
+  ] : [
+    "我想判断公司最适合先做哪个 AI 改造场景。",
+    "请通过追问帮我梳理一份 AI 落地路线图。",
+    "帮我评估一个 AI 自动化想法是否值得做。",
   ];
 
   return (
     <div>
-      <Message role="assistant">
-        我已经读到你的诊断结果：{diagnosis.result.operatorTypeName}。先定位一个最值得改造的业务环节。
-      </Message>
+      {diagnosis ? (
+        <Message role="assistant">
+          我已经读到你的诊断结果：{diagnosis.result.operatorTypeName}。先定位一个最值得改造的业务环节。
+        </Message>
+      ) : (
+        <Message role="assistant">
+          你可以直接从业务现场开始，我会先追问关键背景，再把可落地的 AI 改造路径收束出来。
+        </Message>
+      )}
       <div className="mt-4 grid gap-3">
         {prompts.map((prompt) => (
           <button key={prompt} type="button" onClick={() => onStart(prompt)} className={`${diagnosisMetric} text-left text-sm font-bold transition hover:bg-[#e8e8e4]`}>
@@ -206,6 +221,26 @@ function WorkspaceItem({ icon, title, desc }: { icon: React.ReactNode; title: st
         <b className="block text-[#222322]">{title}</b>
         <small className={diagnosisMutedText}>{desc}</small>
       </span>
+    </div>
+  );
+}
+
+function DiagnosisContextPanel({ result }: { result: DiagnosisResult }) {
+  return (
+    <div className={`${diagnosisPanel} mt-5 grid gap-3 p-4 shadow-none lg:grid-cols-3`}>
+      <MetricLine label="AI 落地阶段" value={`${result.aiAdoptionStage} · ${result.aiAdoptionStageLabel}`} />
+      <MetricLine label="关注偏好" value={result.userTypeLabel} />
+      <MetricLine label="刚需方向" value={result.justNeedLabel} />
+    </div>
+  );
+}
+
+function ColdStartContextPanel() {
+  return (
+    <div className={`${diagnosisPanel} mt-5 grid gap-3 p-4 shadow-none lg:grid-cols-3`}>
+      <MetricLine label="上下文来源" value="直接进入" />
+      <MetricLine label="诊断方式" value="Agent 追问" />
+      <MetricLine label="输出目标" value="AI 落地路径" />
     </div>
   );
 }
