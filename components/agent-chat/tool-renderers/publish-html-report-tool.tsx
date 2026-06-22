@@ -19,26 +19,26 @@ export function PublishHtmlReportTool({ data }: { data: unknown }) {
   const isReady = Boolean(output.url);
 
   return (
-    <Card className="mt-3 border-border/70 bg-background/80 p-4">
+    <Card className="border-[#eaeaea] bg-white p-4 shadow-[0_2px_2px_rgba(0,0,0,0.04)]">
       <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-700">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-[#eaeaea] bg-[#fafafa] text-[#171717]">
           <FileText className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <strong className="block text-sm font-semibold">{output.title || "完整方案 HTML"}</strong>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              <strong className="block text-sm font-semibold text-[#171717]">{output.title || "完整方案 HTML"}</strong>
+              <p className="mt-1 text-sm leading-6 text-[#666666]">
                 {output.summary || output.message || "方案已整理为 HTML 报告。"}
               </p>
             </div>
-            <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+            <span className="rounded-full border border-[#eaeaea] bg-[#fafafa] px-2.5 py-1 text-xs font-semibold text-[#666666]">
               {isReady ? "已发布" : "待接入发布"}
             </span>
           </div>
 
           {output.htmlBytes ? (
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className="mt-3 text-xs text-[#8f8f8f]">
               HTML 大小：{formatBytes(output.htmlBytes)}
             </p>
           ) : null}
@@ -49,7 +49,7 @@ export function PublishHtmlReportTool({ data }: { data: unknown }) {
               <img
                 src={output.qrCodeUrl}
                 alt="完整方案二维码"
-                className="h-28 w-28 rounded-lg border border-border bg-white p-2"
+                className="h-28 w-28 rounded-lg border border-[#eaeaea] bg-white p-2"
               />
               <PublishActions url={output.url} qrCodeUrl={output.qrCodeUrl} />
             </div>
@@ -60,7 +60,7 @@ export function PublishHtmlReportTool({ data }: { data: unknown }) {
           )}
 
           {!isReady ? (
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            <p className="mt-3 text-xs leading-5 text-[#666666]">
               当前只完成工具调用框架；真实 HTML 托管、公开链接和二维码生成会在发布服务接入后启用。
             </p>
           ) : null}
@@ -74,27 +74,27 @@ function PublishActions({ url, qrCodeUrl }: { url?: string | null; qrCodeUrl?: s
   return (
     <div className="flex flex-wrap gap-2">
       {url ? (
-        <Button asChild size="sm">
+        <Button asChild size="sm" className="rounded-md border border-[#171717] bg-[#171717] text-white shadow-none hover:bg-black focus-visible:ring-[#006bff]">
           <a href={url} target="_blank" rel="noreferrer">
             <ExternalLink className="h-4 w-4" />
             立即打开
           </a>
         </Button>
       ) : (
-        <Button disabled size="sm">
+        <Button disabled size="sm" className="rounded-md border border-[#eaeaea] bg-[#f2f2f2] text-[#8f8f8f] shadow-none">
           <ExternalLink className="h-4 w-4" />
           立即打开
         </Button>
       )}
       {qrCodeUrl ? (
-        <Button asChild size="sm" variant="outline">
+        <Button asChild size="sm" variant="outline" className="rounded-md border-[#eaeaea] bg-white text-[#171717] shadow-none hover:border-[#c9c9c9] hover:bg-[#f2f2f2] focus-visible:ring-[#006bff]">
           <a href={qrCodeUrl} download="deep-diagnosis-report-qr.png">
             <Download className="h-4 w-4" />
             保存二维码
           </a>
         </Button>
       ) : (
-        <Button disabled size="sm" variant="outline">
+        <Button disabled size="sm" variant="outline" className="rounded-md border-[#eaeaea] bg-[#f2f2f2] text-[#8f8f8f] shadow-none">
           <Download className="h-4 w-4" />
           保存二维码
         </Button>

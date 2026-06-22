@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import { GeistMono } from "geist/font/mono";
 import "animal-island-ui/style";
+import "@fontsource/noto-sans-sc/chinese-simplified-400.css";
+import "@fontsource/noto-sans-sc/chinese-simplified-500.css";
+import "@fontsource/noto-sans-sc/chinese-simplified-600.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      <body className="bg-background text-foreground antialiased">{children}</body>
+      <body className={`${GeistMono.variable} bg-background text-foreground antialiased`}>{children}</body>
     </html>
   );
 }

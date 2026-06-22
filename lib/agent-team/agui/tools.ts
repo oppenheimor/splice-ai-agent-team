@@ -135,7 +135,11 @@ export const aguiTools = {
       properties: {
         title: { type: "string" },
         description: { type: "string" },
-        layout: { type: "string", enum: ["compact", "comparison", "product", "plan"] },
+        variant: { type: "string", enum: ["recommendation", "comparison", "insight", "task", "resource"] },
+        density: { type: "string", enum: ["compact", "normal", "detailed"] },
+        emphasis: { type: "string", enum: ["none", "first", "scored", "selected"] },
+        layout: { type: "string", enum: ["grid", "list", "matrix", "compact", "comparison", "product", "plan"] },
+        metricsDisplay: { type: "string", enum: ["pills", "rows", "bars", "table"] },
         cards: { type: "array", items: cardSchema, minItems: 1, maxItems: 6 },
       },
       required: ["title", "cards"],
@@ -432,6 +436,11 @@ export function buildAguiPrompt(): string {
 }
 
 type CardsInput = {
+  layout?: unknown;
+  variant?: unknown;
+  density?: unknown;
+  emphasis?: unknown;
+  metricsDisplay?: unknown;
   cards?: Array<Record<string, unknown> & { metrics?: unknown[]; bullets?: unknown[]; actions?: unknown[] }>;
 };
 
@@ -453,6 +462,11 @@ type GiftListInput = {
 function normalizeCards(input: CardsInput) {
   return {
     ...input,
+    variant: normalizeEnum(input.variant, ["recommendation", "comparison", "insight", "task", "resource"]),
+    density: normalizeEnum(input.density, ["compact", "normal", "detailed"]),
+    emphasis: normalizeEnum(input.emphasis, ["none", "first", "scored", "selected"]),
+    layout: normalizeEnum(input.layout, ["grid", "list", "matrix", "compact", "comparison", "product", "plan"]),
+    metricsDisplay: normalizeEnum(input.metricsDisplay, ["pills", "rows", "bars", "table"]),
     cards: (input.cards || []).map((card) => ({
       ...card,
       metrics: card.metrics || [],
@@ -460,6 +474,10 @@ function normalizeCards(input: CardsInput) {
       actions: card.actions || [],
     })),
   };
+}
+
+function normalizeEnum(value: unknown, allowed: string[]) {
+  return typeof value === "string" && allowed.includes(value) ? value : undefined;
 }
 
 function normalizeChart(input: ChartInput) {

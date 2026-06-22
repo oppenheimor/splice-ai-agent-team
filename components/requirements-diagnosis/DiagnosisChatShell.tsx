@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, Bot, ClipboardCheck, MessageSquareText, SearchCheck, Send, Square, SquareUserRound } from "lucide-react";
+import { Bot, Send, Square, SquareUserRound } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import type { AgentManifest } from "@/lib/agent-team/agents/types";
 import { useAgentChat } from "@/lib/agent-team/chat/useAgentChat";
-import type { DiagnosisResult } from "@/lib/requirements-diagnosis/types";
 import type { DiagnosisRecordDto } from "@/lib/requirements-diagnosis/persistence";
 import { MessagePartsRenderer } from "@/components/agent-chat/MessagePartsRenderer";
 import { Button } from "@/components/ui/button";
@@ -21,18 +19,17 @@ import {
   diagnosisPanel,
   diagnosisPrimaryButton,
   diagnosisSecondaryButton,
-  diagnosisSerif,
   diagnosisStage,
   diagnosisShell,
 } from "@/components/requirements-diagnosis/styles";
 
-type DiagnosisChatShellProps = {
+interface IDiagnosisChatShellProps {
   agent: AgentManifest;
   conversationId: string;
   sourceDiagnosis?: DiagnosisRecordDto | null;
 };
 
-export function DiagnosisChatShell({ agent, conversationId, sourceDiagnosis }: DiagnosisChatShellProps) {
+export function DiagnosisChatShell({ agent, conversationId, sourceDiagnosis }: IDiagnosisChatShellProps) {
   const diagnosis = sourceDiagnosis;
   const requestBody = useMemo(() => (diagnosis ? { quizResultId: diagnosis.id } : undefined), [diagnosis]);
   const chat = useAgentChat(agent, {
@@ -51,27 +48,6 @@ export function DiagnosisChatShell({ agent, conversationId, sourceDiagnosis }: D
       <section className={diagnosisStage}>
         <article className={`${diagnosisAppSurface} overflow-hidden`}>
           <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
-            <header>
-              <Link href="/deep-diagnosis" className={diagnosisIconButton} aria-label="返回深度诊断首页">
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-              <div className="text-center">
-                <strong className={`block text-lg leading-tight ${diagnosisSerif}`}>{agent.name}</strong>
-                <small className={diagnosisMutedText}>{diagnosis ? diagnosis.result.operatorTypeName : "独立问答诊断"}</small>
-              </div>
-              {diagnosis ? (
-                <Link href={`/requirements-diagnosis/result?id=${diagnosis.id}`} className={diagnosisIconButton} aria-label="查看完整报告">
-                  <MessageSquareText className="h-4 w-4" />
-                </Link>
-              ) : (
-                <Link href="/requirements-diagnosis/quiz" className={diagnosisIconButton} aria-label="先做初步答题诊断">
-                  <ClipboardCheck className="h-4 w-4" />
-                </Link>
-              )}
-            </header>
-
-            {diagnosis ? <DiagnosisContextPanel result={diagnosis.result} /> : <ColdStartContextPanel />}
-
             <section className="mt-6 min-h-0 space-y-4 overflow-auto pr-1">
               {chat.messages.length === 0 ? (
                 <EmptyState diagnosis={diagnosis} onStart={chat.sendText} />
@@ -158,13 +134,13 @@ function ChatMessage({
 
 function EmptyState({ diagnosis, onStart }: { diagnosis?: DiagnosisRecordDto | null; onStart: (text: string) => void }) {
   const prompts = diagnosis ? [
-    "结合我的诊断结果，帮我找出最适合先做 AI 改造的业务环节。",
-    "帮我做一份本月可执行的企业 AI 转型路线图。",
-    "请评估我现在做 AI 自动化项目的风险和优先级。",
+    "基于我的诊断结果，直接帮我判断：现在最值得先做的 AI 改造切入点是哪一个？",
+    "帮我把诊断结果落成一份 7 / 30 / 90 天执行计划，先从本月能动的事开始。",
+    "请帮我判断哪些 AI 想法值得做、哪些先别做，避免我花冤枉钱。",
   ] : [
-    "我想判断公司最适合先做哪个 AI 改造场景。",
-    "请通过追问帮我梳理一份 AI 落地路线图。",
-    "帮我评估一个 AI 自动化想法是否值得做。",
+    "我还没想清楚从哪里开始，请通过几个问题帮我找出最值得 AI 改造的业务环节。",
+    "帮我判断我的业务里有没有适合 AI 落地的场景，并给出第一步建议。",
+    "我有一个 AI 自动化想法，帮我评估它值不值得做、风险在哪里。",
   ];
 
   return (
@@ -185,16 +161,9 @@ function EmptyState({ diagnosis, onStart }: { diagnosis?: DiagnosisRecordDto | n
           </button>
         ))}
       </div>
-      <div className={`mt-4 p-4 ${diagnosisPanel}`}>
-        <div className="flex items-center gap-2">
-          <SearchCheck className="h-4 w-4 text-[#2e2f2d]" />
-          <strong className="text-sm">结构化判断</strong>
-        </div>
-        <div className="mt-3 grid gap-2">
-          <WorkspaceItem icon={<MessageSquareText className="h-4 w-4" />} title="待确认问题" desc="把追问从聊天流里提炼出来" />
-          <WorkspaceItem icon={<ClipboardCheck className="h-4 w-4" />} title="行动清单" desc="沉淀本周、本月、持续动作" />
-        </div>
-      </div>
+      <p className={`mt-3 px-1 text-xs ${diagnosisMutedText}`}>
+        也可以直接输入你的行业、岗位、流程痛点或一个 AI 想法，我会先帮你判断是否值得做。
+      </p>
     </div>
   );
 }
@@ -222,34 +191,5 @@ function WorkspaceItem({ icon, title, desc }: { icon: React.ReactNode; title: st
         <small className={diagnosisMutedText}>{desc}</small>
       </span>
     </div>
-  );
-}
-
-function DiagnosisContextPanel({ result }: { result: DiagnosisResult }) {
-  return (
-    <div className={`${diagnosisPanel} mt-5 grid gap-3 p-4 shadow-none lg:grid-cols-3`}>
-      <MetricLine label="AI 落地阶段" value={`${result.aiAdoptionStage} · ${result.aiAdoptionStageLabel}`} />
-      <MetricLine label="关注偏好" value={result.userTypeLabel} />
-      <MetricLine label="刚需方向" value={result.justNeedLabel} />
-    </div>
-  );
-}
-
-function ColdStartContextPanel() {
-  return (
-    <div className={`${diagnosisPanel} mt-5 grid gap-3 p-4 shadow-none lg:grid-cols-3`}>
-      <MetricLine label="上下文来源" value="直接进入" />
-      <MetricLine label="诊断方式" value="Agent 追问" />
-      <MetricLine label="输出目标" value="AI 落地路径" />
-    </div>
-  );
-}
-
-function MetricLine({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="flex justify-between gap-3 text-sm">
-      <b>{label}</b>
-      <em className={diagnosisMutedText}>{value}</em>
-    </span>
   );
 }

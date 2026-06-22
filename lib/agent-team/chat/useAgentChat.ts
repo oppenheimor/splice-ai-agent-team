@@ -111,7 +111,7 @@ export function useAgentChat(agent: AgentManifest, options: UseAgentChatOptions 
     const timer = window.setTimeout(() => {
       saveConversation({ ...activeConversation, messages });
       setConversations(listConversations(agent.id));
-    }, 260);
+    }, 1200);
     return () => window.clearTimeout(timer);
   }, [activeConversation, agent.id, isBusy, messages]);
 

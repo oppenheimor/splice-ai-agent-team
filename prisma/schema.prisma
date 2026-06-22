@@ -20,6 +20,9 @@ model User {
   diagnosisResults DiagnosisQuizResult[]
   diagnosisChatSessions DiagnosisChatSession[]
   diagnosisChatMessages DiagnosisChatMessage[]
+  agentConversations AgentConversation[]
+  agentMessages      AgentMessage[]
+  agentRuns          AgentRun[]
 
   @@map("users")
 }
@@ -144,4 +147,88 @@ model TreasureChatMessage {
   @@index([visitorId, createdAt])
   @@index([conversationId, createdAt])
   @@map("treasure_chat_messages")
+}
+
+model AgentConversation {
+  id             String         @id @default(cuid())
+  userId         String         @map("user_id")
+  sessionId      String?        @map("session_id")
+  visitorId      String?        @map("visitor_id")
+  conversationId String         @unique @map("conversation_id")
+  agentId        String         @map("agent_id")
+  agentVersion   String?        @map("agent_version")
+  promptVersion  String?        @map("prompt_version")
+  model          String?
+  title          String?
+  status         String         @default("active")
+  firstUserText  String?        @map("first_user_text")
+  metadata       Json?
+  lastMessageAt  DateTime       @default(now()) @map("last_message_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages       AgentMessage[]
+  runs           AgentRun[]
+
+  @@index([userId, lastMessageAt])
+  @@index([agentId, lastMessageAt])
+  @@index([sessionId, lastMessageAt])
+  @@index([visitorId, lastMessageAt])
+  @@map("agent_conversations")
+}
+
+model AgentMessage {
+  id                  String            @id @default(cuid())
+  userId              String            @map("user_id")
+  agentConversationId String            @map("agent_conversation_id")
+  conversationId      String            @map("conversation_id")
+  agentId             String            @map("agent_id")
+  messageId           String            @map("message_id")
+  messageIndex        Int               @default(0) @map("message_index")
+  role                String
+  text                String?
+  parts               Json?
+  metadata            Json?
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation        AgentConversation @relation(fields: [agentConversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, messageId])
+  @@index([userId, createdAt])
+  @@index([agentId, createdAt])
+  @@index([agentConversationId, createdAt])
+  @@index([conversationId, messageIndex])
+  @@index([conversationId, createdAt])
+  @@map("agent_messages")
+}
+
+model AgentRun {
+  id                  String            @id @default(cuid())
+  userId              String            @map("user_id")
+  agentConversationId String            @map("agent_conversation_id")
+  conversationId      String            @map("conversation_id")
+  agentId             String            @map("agent_id")
+  agentVersion        String?           @map("agent_version")
+  promptVersion       String?           @map("prompt_version")
+  model               String?
+  status              String            @default("started")
+  inputMessageCount   Int               @default(0) @map("input_message_count")
+  outputMessageCount  Int               @default(0) @map("output_message_count")
+  latencyMs           Int?              @map("latency_ms")
+  errorMessage        String?           @map("error_message")
+  decision            Json?
+  metadata            Json?
+  startedAt           DateTime          @default(now()) @map("started_at")
+  finishedAt          DateTime?         @map("finished_at")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation        AgentConversation @relation(fields: [agentConversationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startedAt])
+  @@index([agentId, startedAt])
+  @@index([conversationId, startedAt])
+  @@index([status, startedAt])
+  @@map("agent_runs")
 }

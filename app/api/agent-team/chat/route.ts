@@ -1,5 +1,5 @@
 import { deepseek } from "@ai-sdk/deepseek";
-import { consumeStream, convertToModelMessages, stepCountIs, streamText, type UIMessage } from "ai";
+import { consumeStream, convertToModelMessages, streamText, type UIMessage } from "ai";
 import { NextRequest } from "next/server";
 import { AUTH_COOKIE_NAME } from "@/lib/auth/cookies";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -7,8 +7,21 @@ import { recordTreasureChatMessages } from "@/lib/analytics/treasure-hunt";
 import { pickAguiTools } from "@/lib/agent-team/agui/tools";
 import { getAgentById } from "@/lib/agent-team/agents/registry";
 import { buildSystemPrompt } from "@/lib/agent-team/agents/prompts";
+import { buildAgentStopCondition, resolveAgentLoopConfig } from "@/lib/agent-team/chat/loop-engine";
+import {
+  finishAgentRun,
+  recordAgentConversationSnapshot,
+  startAgentRun,
+} from "@/lib/agent-team/evaluation/recording";
 import { pickExternalTools } from "@/lib/agent-team/external-tools";
 import { buildRuntimeContext } from "@/lib/agent-team/runtime-context";
+import { buildDeepDiagnosisManagedContext } from "@/lib/deep-diagnosis/context-manager";
+import { decideNextDeepDiagnosisAction } from "@/lib/deep-diagnosis/decision";
+import {
+  attachDeepDiagnosisValidationMetadata,
+  validateDeepDiagnosisOutput,
+} from "@/lib/deep-diagnosis/output-validator";
+import { resolveDeepDiagnosisToolGuard } from "@/lib/deep-diagnosis/tool-guard";
 import { recordDiagnosisChatMessages } from "@/lib/requirements-diagnosis/chat-messages";
 import {
   resolveDiagnosisContext,
@@ -58,41 +71,74 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "服务端缺少 DEEPSEEK_API_KEY，请先配置环境变量。" }, { status: 500 });
   }
 
+  let runId: string | null = null;
+
   try {
-    // 深度诊断可以从评测结果页带上下文进入，也可以作为独立产品直接冷启动。
     const diagnosis = agent.id === "deep-diagnosis" && input.quizResultId
       ? await resolveDiagnosisContext(user.id, input.quizResultId, input.conversationId || input.id)
       : null;
     const conversationId = diagnosis?.conversationId || input.conversationId || input.id;
     const sessionId = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
+
+    if (!conversationId) {
+      return Response.json({ error: "缺少 conversationId。" }, { status: 400 });
+    }
 
     await recordChatMessages({
-      agentId: agent.id,
+      agent,
       userId: user.id,
       sessionId,
       visitorId: input.visitorId,
       conversationId,
       diagnosis,
+      model,
       messages,
     });
 
-    const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
+    const loopConfig = resolveAgentLoopConfig(agent.id);
+    const managedContext = loopConfig.contextManagement ? buildDeepDiagnosisManagedContext(messages) : "";
     const tools = {
       ...pickAguiTools(agent.tools),
       ...pickExternalTools(agent.externalTools),
     };
+    const deepDiagnosisDecision = agent.id === "deep-diagnosis" ? decideNextDeepDiagnosisAction(messages) : null;
+    const deepDiagnosisToolGuard = deepDiagnosisDecision
+      ? resolveDeepDiagnosisToolGuard(tools, deepDiagnosisDecision)
+      : null;
+    runId = await startAgentRun({
+      userId: user.id,
+      sessionId,
+      visitorId: input.visitorId,
+      conversationId,
+      agent,
+      model,
+      inputMessageCount: messages.length,
+      decision: deepDiagnosisDecision,
+    });
+    console.log(buildSystemPrompt(agent, diagnosis?.context))
+    const systemMessages = [
+      { role: "system" as const, content: buildSystemPrompt(agent, diagnosis?.context) },
+      { role: "system" as const, content: buildRuntimeContext({ timeZone: input.timeZone }) },
+    ];
+
+    if (managedContext) {
+      systemMessages.push({ role: "system", content: managedContext });
+    }
+
     const result = streamText({
       model: deepseek(model),
-      system: [
-        { role: "system", content: buildSystemPrompt(agent, diagnosis?.context) },
-        { role: "system", content: buildRuntimeContext({ timeZone: input.timeZone }) },
-      ],
+      system: systemMessages,
       messages: await convertToModelMessages(compactUIMessages(messages), {
         tools,
         ignoreIncompleteToolCalls: true,
       }),
       tools,
-      stopWhen: stepCountIs(4),
+      activeTools: deepDiagnosisToolGuard?.activeTools,
+      prepareStep: deepDiagnosisToolGuard
+        ? () => ({ activeTools: deepDiagnosisToolGuard.activeTools })
+        : undefined,
+      stopWhen: buildAgentStopCondition(agent.id),
       abortSignal: request.signal,
       temperature: 0.72,
       providerOptions: {
@@ -106,35 +152,68 @@ export async function POST(request: NextRequest) {
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
       onFinish: async ({ messages: finishedMessages }) => {
+        const messagesToPersist = deepDiagnosisDecision
+          ? withDeepDiagnosisValidationMetadata(finishedMessages, deepDiagnosisDecision)
+          : finishedMessages;
+
         await recordChatMessages({
-          agentId: agent.id,
+          agent,
           userId: user.id,
           sessionId,
           visitorId: input.visitorId,
           conversationId,
           diagnosis,
-          messages: finishedMessages,
+          model,
+          messages: messagesToPersist,
         });
+
+        if (runId) {
+          await finishAgentRun({
+            runId,
+            outputMessageCount: messagesToPersist.length,
+            status: "completed",
+          });
+        }
       },
       consumeSseStream: consumeStream,
     });
   } catch (error) {
+    if (runId) {
+      await finishAgentRun({
+        runId,
+        outputMessageCount: 0,
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : "生成失败",
+      });
+    }
+    console.error("[agent-team] chat generation failed", error);
     return Response.json({ error: error instanceof Error ? error.message : "生成失败，请稍后再试。" }, { status: 500 });
   }
 }
 
 async function recordChatMessages(input: {
-  agentId: string;
+  agent: NonNullable<ReturnType<typeof getAgentById>>;
   userId: string;
   sessionId: string | undefined;
   visitorId: string | undefined;
   conversationId: string | undefined;
   diagnosis: DiagnosisResolution | null;
+  model: string | undefined;
   messages: UIMessage[];
 }): Promise<void> {
   if (!input.conversationId) {
     return;
   }
+
+  await recordAgentConversationSnapshot({
+    userId: input.userId,
+    sessionId: input.sessionId,
+    visitorId: input.visitorId,
+    conversationId: input.conversationId,
+    agent: input.agent,
+    model: input.model,
+    messages: input.messages,
+  });
 
   if (input.diagnosis) {
     await recordDiagnosisChatMessages({
@@ -146,7 +225,7 @@ async function recordChatMessages(input: {
     return;
   }
 
-  if (input.agentId !== "treasure-hunt") {
+  if (input.agent.id !== "treasure-hunt") {
     return;
   }
 
@@ -166,4 +245,34 @@ function compactUIMessages(messages: UIMessage[]): UIMessage[] {
       ? message.parts.map((part) => (part.type === "text" ? { ...part, text: String(part.text || "").slice(0, 5000) } : part))
       : message.parts,
   }));
+}
+
+function withDeepDiagnosisValidationMetadata(
+  messages: UIMessage[],
+  decision: ReturnType<typeof decideNextDeepDiagnosisAction>,
+): UIMessage[] {
+  const lastAssistantIndex = messages.findLastIndex((message) => message.role === "assistant");
+
+  if (lastAssistantIndex === -1) {
+    return messages;
+  }
+
+  const validation = validateDeepDiagnosisOutput({
+    responseMessage: messages[lastAssistantIndex],
+    decision,
+    conversationMessages: messages,
+  });
+
+  if (!validation.passed) {
+    console.warn("[deep-diagnosis] output validation failed", {
+      score: validation.score,
+      violations: validation.violations,
+    });
+  }
+
+  return messages.map((message, index) => (
+    index === lastAssistantIndex
+      ? attachDeepDiagnosisValidationMetadata(message, validation)
+      : message
+  ));
 }

@@ -14,6 +14,9 @@ importers:
       '@ai-sdk/react':
         specifier: ^3.0.184
         version: 3.0.193(react@19.2.4)(zod@4.4.3)
+      '@fontsource/noto-sans-sc':
+        specifier: ^5.2.9
+        version: 5.2.9
       '@prisma/adapter-pg':
         specifier: ^7.8.0
         version: 7.8.0
@@ -44,6 +47,9 @@ importers:
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
+      geist:
+        specifier: ^1.7.2
+        version: 1.7.2(next@16.2.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))
       lucide-react:
         specifier: ^1.16.0
         version: 1.16.0(react@19.2.4)
@@ -1828,6 +1834,11 @@ packages:
 
   functions-have-names@1.2.3:
     resolution: {integrity: sha512-xckBUXyTIqT97tq2x2AMb+g163b5JFysYk0x4qxNFwbfQkmNZoiRHb6sPzI9/QV33WeuvVYBUIiD4NzNIyqaRQ==}
+
+  geist@1.7.2:
+    resolution: {integrity: sha512-Gu5lDFa3pLRyoBlBPf0QIFHVdWAnpco7fS1bJm41jyLPFoguBgiubseUN2oLXMgqZ7uxAxDoXcHMhCY/fOTTgg==}
+    peerDependencies:
+      next: '>=13.2.0'
 
   generate-function@2.3.1:
     resolution: {integrity: sha512-eeB5GfMNeevm/GRYq20ShmsaGcmI81kIX2K9XQx5miC8KdHaC6Jm0qQ8ZNeGOi7wYB8OsdxKs+Y2oVuTFuVwKQ==}
@@ -4935,6 +4946,10 @@ snapshots:
       is-callable: 1.2.7
 
   functions-have-names@1.2.3: {}
+
+  geist@1.7.2(next@16.2.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)):
+    dependencies:
+      next: 16.2.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
 
   generate-function@2.3.1:
     dependencies:

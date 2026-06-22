@@ -41,7 +41,7 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
     .slice(0, 3);
   const operatorAvatar = getOperatorAvatar(result.operatorTypeName);
   const showFloatingAction = Boolean(recordId) && scrollProgress >= 0.3 && scrollProgress < 0.8 && !isBottomActionNear;
-  const deepDiagnosisHref = recordId ? `/deep-diagnosis/chat/${recordId}?sourceResultId=${recordId}` : "/deep-diagnosis";
+  const deepDiagnosisHref = "/deep-diagnosis";
 
   useEffect(() => {
     function updateFloatingAction() {
