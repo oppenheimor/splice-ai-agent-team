@@ -19,6 +19,46 @@ const REPORT_LEVEL_RANK: Record<DeepDiagnosisDecision["maxReportLevel"], number>
 
 const DEEP_DIAGNOSIS_DECISION_RULES: DeepDiagnosisDecisionRule[] = [
   {
+    id: "confirmed_generate_report",
+    priority: 1000,
+    when: (state) => state.hasGenerateReportIntent
+      && state.reportReadiness.ready
+      && !state.reportReadiness.hasUncoveredAreas,
+    decide: () => ({
+      nextAction: "generate_report",
+      inputMode: "none",
+      maxReportLevel: "business_overview_report",
+      requiredNextSteps: [
+        "先输出对话内完整诊断书 fallback",
+        "再调用 publishHtmlReport 发布同一份完整 HTML 报告",
+        "只有工具返回 url 后才能声称 HTML 已发布",
+      ],
+      reason: "用户已确认生成完整方案，且完整报告就绪，可以进入报告生成与 HTML 发布。",
+    }),
+  },
+  {
+    id: "confirmed_publish_current_deliverable",
+    priority: 1000,
+    when: (state) => state.runtimeState.deliverableReadiness.confirmedToPublish
+      && state.runtimeState.deliverableReadiness.canOfferPublish,
+    decide: (state) => ({
+      nextAction: "publish_current_deliverable",
+      inputMode: "none",
+      maxReportLevel: state.runtimeState.deliverableReadiness.level === "special_report"
+        ? "workflow_report"
+        : "hypothesis_brief",
+      forbiddenPhrases: ["完整诊断书", "完整业务全局诊断", "完整业务方案"],
+      warnings: [state.runtimeState.deliverableReadiness.publishBoundary],
+      requiredNextSteps: [
+        `先输出对话内${state.runtimeState.deliverableReadiness.publishTitle}`,
+        "再调用 publishHtmlReport 发布同一份 HTML",
+        "HTML 标题必须使用当前交付物级别，不得冒充完整诊断书",
+        "只有工具返回 url 后才能声称 HTML 已发布",
+      ],
+      reason: "用户已明确确认发布当前可交付物，可以把当前假设简报或专项方案保存为 HTML。",
+    }),
+  },
+  {
     id: "entry_scope_route_required",
     priority: 1000,
     when: (state) => state.hasUserMessage && !state.hasScopeRoute,
@@ -84,7 +124,7 @@ const DEEP_DIAGNOSIS_DECISION_RULES: DeepDiagnosisDecisionRule[] = [
   {
     id: "minimum_facts_missing",
     priority: 800,
-    when: (state) => state.reportReadiness.missingMinimumFactLabels.length > 0,
+    when: (state) => state.hasScopeRoute && state.reportReadiness.missingMinimumFactLabels.length > 0,
     decide: (state) => ({
       nextAction: "ask_missing_facts",
       inputMode: "text",
@@ -126,7 +166,7 @@ const DEEP_DIAGNOSIS_DECISION_RULES: DeepDiagnosisDecisionRule[] = [
   {
     id: "external_evidence_coverage_required",
     priority: 600,
-    when: (state) => /webSearch|外部资料|行业分析|竞品|案例|趋势|市场数据/.test(state.transcript)
+    when: (state) => state.runtimeState.progress.externalResearchRequired
       && !state.hasEvidenceCoverage,
     decide: () => ({
       nextAction: "offer_hypothesis_brief",
@@ -170,7 +210,7 @@ const DEEP_DIAGNOSIS_DECISION_RULES: DeepDiagnosisDecisionRule[] = [
   {
     id: "ready_offer_complete_report",
     priority: 600,
-    when: (state) => state.reportReadiness.ready && !state.reportReadiness.hasUncoveredAreas,
+    when: (state) => state.reportReadiness.ready && !state.reportReadiness.hasUncoveredAreas && !state.hasGenerateReportIntent,
     decide: () => ({
       nextAction: "offer_complete_report",
       inputMode: "single_choice",
@@ -178,6 +218,25 @@ const DEEP_DIAGNOSIS_DECISION_RULES: DeepDiagnosisDecisionRule[] = [
       allowedLabels: ["出完整方案", "再诊断一轮"],
       forbiddenPhrases: ["已生成 HTML 链接", "二维码已生成"],
       reason: "完整报告就绪，但仍需先让用户确认是否生成。",
+    }),
+  },
+  {
+    id: "ready_offer_current_deliverable_publish",
+    priority: 600,
+    when: (state) => state.hasCurrentDeliverableReady
+      && !state.runtimeState.deliverableReadiness.confirmedToPublish
+      && !state.reportReadiness.ready,
+    decide: (state) => ({
+      nextAction: "offer_current_deliverable_publish",
+      inputMode: "single_choice",
+      maxReportLevel: state.runtimeState.deliverableReadiness.level === "special_report"
+        ? "workflow_report"
+        : "hypothesis_brief",
+      allowedLabels: ["发布当前简报为 HTML", "继续补充诊断"],
+      forbiddenPhrases: ["已生成 HTML 链接", "完整诊断书", "完整业务方案"],
+      warnings: [state.runtimeState.deliverableReadiness.publishBoundary],
+      requiredNextSteps: ["先让用户确认是否发布当前可交付物；用户确认前不得调用 publishHtmlReport"],
+      reason: "当前已有可执行阶段性产物，但还未达到完整报告门禁；可以询问是否发布当前简报为 HTML。",
     }),
   },
   {
@@ -276,22 +335,32 @@ function createDefaultDecision(state: DeepDiagnosisDecisionState): DeepDiagnosis
 }
 
 function mergeDecision(current: DeepDiagnosisDecision, patch: DeepDiagnosisDecisionPatch): DeepDiagnosisDecision {
-  const nextReportLevel = patch.maxReportLevel
+  const ignorePatchForCurrentDeliverable = shouldIgnorePatchForCurrentDeliverable(current, patch);
+  const nextReportLevel = !ignorePatchForCurrentDeliverable && patch.maxReportLevel
     ? mergeReportLevel(current, patch.maxReportLevel)
     : current.maxReportLevel;
+  const nextAction = !ignorePatchForCurrentDeliverable && shouldReplaceAction(current, patch)
+    ? patch.nextAction || current.nextAction
+    : current.nextAction;
+  const currentHardBlocks = shouldDropReportReadinessBlocksForCurrentDeliverable(current, patch)
+    ? current.hardBlocks.filter(isEarlyContextBlock)
+    : current.hardBlocks;
+  const patchHardBlocks = ignorePatchForCurrentDeliverable || shouldIgnorePatchHardBlocksForCurrentDeliverable(current, patch)
+    ? []
+    : patch.hardBlocks;
 
   return {
     ...current,
-    nextAction: shouldReplaceAction(current, patch) ? patch.nextAction || current.nextAction : current.nextAction,
-    inputMode: patch.inputMode || current.inputMode,
+    nextAction,
+    inputMode: ignorePatchForCurrentDeliverable ? current.inputMode : patch.inputMode || current.inputMode,
     maxReportLevel: nextReportLevel,
     allowedLabels: mergeUnique(current.allowedLabels, patch.allowedLabels),
     forbiddenPhrases: mergeUnique(current.forbiddenPhrases, patch.forbiddenPhrases),
-    hardBlocks: mergeUnique(current.hardBlocks, patch.hardBlocks),
-    warnings: mergeUnique(current.warnings, patch.warnings),
-    requiredNextSteps: mergeUnique(current.requiredNextSteps, patch.requiredNextSteps),
-    missingFacts: mergeUnique(current.missingFacts, patch.missingFacts),
-    reason: patch.reason || current.reason,
+    hardBlocks: mergeUnique(currentHardBlocks, patchHardBlocks),
+    warnings: mergeUnique(current.warnings, ignorePatchForCurrentDeliverable ? undefined : patch.warnings),
+    requiredNextSteps: mergeUnique(current.requiredNextSteps, ignorePatchForCurrentDeliverable ? undefined : patch.requiredNextSteps),
+    missingFacts: mergeUnique(current.missingFacts, ignorePatchForCurrentDeliverable ? undefined : patch.missingFacts),
+    reason: ignorePatchForCurrentDeliverable ? current.reason : patch.reason || current.reason,
     canMentionCustomization: patch.canMentionCustomization ?? current.canMentionCustomization,
     canRecommendCustomization: patch.canRecommendCustomization ?? current.canRecommendCustomization,
   };
@@ -299,8 +368,53 @@ function mergeDecision(current: DeepDiagnosisDecision, patch: DeepDiagnosisDecis
 
 function shouldReplaceAction(current: DeepDiagnosisDecision, patch: DeepDiagnosisDecisionPatch): boolean {
   if (!patch.nextAction) return false;
+  if (current.nextAction === "publish_current_deliverable" && !isEarlyContextAction(patch.nextAction)) {
+    return false;
+  }
+  if (current.nextAction === "ask_scope_route" && current.hardBlocks.includes("尚未完成入口范围路由")) {
+    return false;
+  }
+  if (current.nextAction === "ask_open_context" && current.hardBlocks.some((block) => block.startsWith("全局盘点前缺少开放上下文"))) {
+    return false;
+  }
+  if (patch.nextAction === "offer_current_deliverable_publish" || patch.nextAction === "publish_current_deliverable") {
+    return !current.hardBlocks.some((block) => block.includes("尚未完成入口范围路由") || block.startsWith("全局盘点前缺少开放上下文"));
+  }
   if (current.hardBlocks.length === 0) return true;
   return Boolean(patch.hardBlocks?.length);
+}
+
+function shouldDropReportReadinessBlocksForCurrentDeliverable(
+  current: DeepDiagnosisDecision,
+  patch: DeepDiagnosisDecisionPatch,
+): boolean {
+  return patch.nextAction === "offer_current_deliverable_publish"
+    || patch.nextAction === "publish_current_deliverable";
+}
+
+function shouldIgnorePatchHardBlocksForCurrentDeliverable(
+  current: DeepDiagnosisDecision,
+  patch: DeepDiagnosisDecisionPatch,
+): boolean {
+  return current.nextAction === "publish_current_deliverable"
+    && !patch.hardBlocks?.some(isEarlyContextBlock);
+}
+
+function shouldIgnorePatchForCurrentDeliverable(
+  current: DeepDiagnosisDecision,
+  patch: DeepDiagnosisDecisionPatch,
+): boolean {
+  return current.nextAction === "publish_current_deliverable"
+    && !patch.hardBlocks?.some(isEarlyContextBlock)
+    && !isEarlyContextAction(patch.nextAction || current.nextAction);
+}
+
+function isEarlyContextAction(action: DeepDiagnosisDecision["nextAction"]): boolean {
+  return action === "ask_scope_route" || action === "ask_open_context";
+}
+
+function isEarlyContextBlock(block: string): boolean {
+  return block.includes("尚未完成入口范围路由") || block.startsWith("全局盘点前缺少开放上下文");
 }
 
 function mergeReportLevel(

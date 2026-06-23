@@ -11,7 +11,9 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const nextPath = sanitizeNextPath(String(formData.get("next") ?? ""));
+  const nextPath = sanitizeNextPath(
+    String(formData.get("redirect_url") ?? formData.get("next") ?? ""),
+  );
 
   if (!username || !password) {
     return NextResponse.redirect(
@@ -71,7 +73,7 @@ function buildLoginUrl(request: NextRequest, error: string, nextPath: string) {
   const url = buildRequestUrl(request, "/agent-team/login");
   url.searchParams.set("error", error);
   if (nextPath) {
-    url.searchParams.set("next", nextPath);
+    url.searchParams.set("redirect_url", nextPath);
   }
   return url;
 }
@@ -83,6 +85,14 @@ function sanitizeNextPath(value: string): string {
 
   if (value.startsWith("//") || value.includes("://")) {
     return "";
+  }
+
+  if (value === "/agent-team") {
+    return "/";
+  }
+
+  if (value.startsWith("/agent-team/")) {
+    return value.slice("/agent-team".length);
   }
 
   return value;

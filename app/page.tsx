@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, LogOut, MessageSquareText, SearchCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Coins, LogOut, MessageSquareText, SearchCheck, Settings, Sparkles } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,16 +70,30 @@ export default async function Home() {
               打开简易后台
             </Link>
           </Button>
+          <Button asChild variant="outline" className="h-11">
+            <Link href="/admin/credits">
+              <Coins className="h-4 w-4" />
+              积分后台
+            </Link>
+          </Button>
           {user ? (
-            <form action="/agent-team/api/auth/logout" method="post">
-              <Button variant="outline" className="h-11" type="submit">
-                <LogOut className="h-4 w-4" />
-                退出登录
+            <>
+              <Button asChild variant="outline" className="h-11">
+                <Link href="/settings">
+                  <Settings className="h-4 w-4" />
+                  设置
+                </Link>
               </Button>
-            </form>
+              <form action="/agent-team/api/auth/logout" method="post">
+                <Button variant="outline" className="h-11" type="submit">
+                  <LogOut className="h-4 w-4" />
+                  退出登录
+                </Button>
+              </form>
+            </>
           ) : (
             <Button asChild variant="outline" className="h-11">
-              <Link href="/login">登录</Link>
+              <Link href="/login?redirect_url=/">登录</Link>
             </Button>
           )}
         </div>

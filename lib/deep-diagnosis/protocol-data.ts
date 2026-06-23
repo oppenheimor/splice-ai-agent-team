@@ -333,7 +333,7 @@ export const DEEP_DIAGNOSIS_ASSET_QUALITY_CRITERIA = [
 ] as const;
 
 export const DEEP_DIAGNOSIS_TODOS = [
-  "TODO: publishHtmlReport 当前仍是占位发布链路，后续需要接入真实 HTML 文件发布和二维码生成。",
+  "TODO: publishHtmlReport 当前已接入真实 HTML 发布；前端会基于线上链接生成二维码。",
   "TODO: deep-diagnosis 独立会话目前仍依赖本地会话和已有诊断会话链路，后续需要独立服务端持久化。",
   "TODO: 深度诊断价格 / 价值边界后续单独设计，本轮不纳入实现。",
 ] as const;

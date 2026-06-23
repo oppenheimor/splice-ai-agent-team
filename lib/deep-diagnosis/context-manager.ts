@@ -1,4 +1,5 @@
 import type { UIMessage } from "ai";
+import { formatDeepDiagnosisDeliverableReadinessForPrompt } from "./deliverable-readiness";
 import { buildDeepDiagnosisReportReadinessContext } from "./report-readiness";
 import { decideNextDeepDiagnosisAction, formatDeepDiagnosisDecisionForPrompt } from "./decision";
 import { formatDeepDiagnosisEvidenceViewForPrompt } from "./evidence-view";
@@ -27,6 +28,7 @@ export function buildDeepDiagnosisManagedContext(messages: UIMessage[]): string 
   const factCardContext = formatDeepDiagnosisFactCardForPrompt(runtimeState.factCard);
   const evidenceViewContext = formatDeepDiagnosisEvidenceViewForPrompt(runtimeState.evidenceView);
   const runtimeQualityContext = formatDeepDiagnosisRuntimeQualityGateForPrompt(runtimeState.qualityGate);
+  const deliverableReadinessContext = formatDeepDiagnosisDeliverableReadinessForPrompt(runtimeState.deliverableReadiness);
 
   if (!userFacts.length && !toolEvidence.length) {
     return [
@@ -39,6 +41,8 @@ export function buildDeepDiagnosisManagedContext(messages: UIMessage[]): string 
       evidenceViewContext,
       "",
       runtimeQualityContext,
+      "",
+      deliverableReadinessContext,
       "",
       reportReadinessContext,
     ].join("\n");
@@ -66,6 +70,8 @@ export function buildDeepDiagnosisManagedContext(messages: UIMessage[]): string 
     evidenceViewContext,
     "",
     runtimeQualityContext,
+    "",
+    deliverableReadinessContext,
     "",
     reportReadinessContext,
   ]

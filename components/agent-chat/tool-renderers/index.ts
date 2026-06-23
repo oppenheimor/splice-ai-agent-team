@@ -1,5 +1,6 @@
-export { CardsTool, ChartTool } from "./visual-tools";
+export { CardsTool } from "./visual-tools";
+export { ChartTool } from "./chart-tool";
 export { ChecklistTool, TimelineTool, ComparisonTool, ScorecardTool, DataTableTool, FrameworkTool, GenericTool } from "./structured-tools";
-export { ChoiceTool } from "./choice-tool";
+export { ChoiceTool, hasRenderableChoiceOptions } from "./choice-tool";
 export { PublishHtmlReportTool } from "./publish-html-report-tool";
 export { WebSearchTool } from "./web-search-tool";

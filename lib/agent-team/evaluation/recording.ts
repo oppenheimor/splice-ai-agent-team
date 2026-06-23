@@ -133,27 +133,41 @@ export async function finishAgentRun(input: FinishAgentRunInput): Promise<void> 
 }
 
 async function ensureAgentConversation(input: EnsureAgentConversationInput) {
+  const existing = await prisma.agentConversation.findUnique({
+    where: { conversationId: input.conversationId },
+    select: { id: true, userId: true, agentId: true },
+  });
+
+  if (existing && (existing.userId !== input.userId || existing.agentId !== input.agent.id)) {
+    throw new Error("会话不存在或无权访问。");
+  }
+
   const firstUserText = input.messages.find((message) => message.role === "user")
     ? redactSensitiveText(extractMessageText(input.messages.find((message) => message.role === "user")!)).slice(0, 500)
     : undefined;
   const lastMessageAt = new Date();
 
-  return prisma.agentConversation.upsert({
-    where: { conversationId: input.conversationId },
-    update: {
-      userId: input.userId,
-      sessionId: input.sessionId,
-      visitorId: input.visitorId,
-      agentId: input.agent.id,
-      agentVersion: input.agent.version,
-      promptVersion: AGENT_EVAL_PROMPT_VERSION,
-      model: input.model,
-      firstUserText,
-      title: firstUserText ? deriveTitle(firstUserText) : undefined,
-      metadata: input.metadata ? toJsonValue(input.metadata) : undefined,
-      lastMessageAt,
-    },
-    create: {
+  if (existing) {
+    return prisma.agentConversation.update({
+      where: { id: existing.id },
+      data: {
+        userId: input.userId,
+        sessionId: input.sessionId,
+        visitorId: input.visitorId,
+        agentId: input.agent.id,
+        agentVersion: input.agent.version,
+        promptVersion: AGENT_EVAL_PROMPT_VERSION,
+        model: input.model,
+        firstUserText,
+        title: firstUserText ? deriveTitle(firstUserText) : undefined,
+        metadata: input.metadata ? toJsonValue(input.metadata) : undefined,
+        lastMessageAt,
+      },
+    });
+  }
+
+  return prisma.agentConversation.create({
+    data: {
       userId: input.userId,
       sessionId: input.sessionId,
       visitorId: input.visitorId,

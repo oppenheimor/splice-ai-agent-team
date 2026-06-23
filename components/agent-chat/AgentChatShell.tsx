@@ -5,11 +5,13 @@ import { Bot, LogOut, Plus, Send, Square, SquareUserRound } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { AgentManifest } from "@/lib/agent-team/agents/types";
 import { useAgentChat } from "@/lib/agent-team/chat/useAgentChat";
+import { useCreditBalance } from "@/lib/credits/useCreditBalance";
 import { Button } from "@/components/ui/button";
 import { MessagePartsRenderer } from "./MessagePartsRenderer";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { CreditBalancePill, CreditErrorNotice, CreditSettingsButton } from "@/components/credits/CreditStatus";
 
 type AgentChatShellProps = {
   agent: AgentManifest;
@@ -18,6 +20,7 @@ type AgentChatShellProps = {
 
 export function AgentChatShell({ agent, emptyState }: AgentChatShellProps) {
   const chat = useAgentChat(agent);
+  const credit = useCreditBalance();
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -61,12 +64,16 @@ export function AgentChatShell({ agent, emptyState }: AgentChatShellProps) {
             </Badge>
             <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{agent.name}</h1>
           </div>
-          <form action="/agent-team/api/auth/logout" method="post">
-            <Button variant="outline" type="submit">
-              <LogOut className="h-4 w-4" />
-              退出
-            </Button>
-          </form>
+          <div className="flex items-center gap-2">
+            <CreditBalancePill credit={credit} compact />
+            <CreditSettingsButton />
+            <form action="/agent-team/api/auth/logout" method="post">
+              <Button variant="outline" type="submit">
+                <LogOut className="h-4 w-4" />
+                退出
+              </Button>
+            </form>
+          </div>
         </header>
 
         <section className="min-h-0 overflow-auto px-4 py-7 md:px-7">
@@ -112,7 +119,7 @@ export function AgentChatShell({ agent, emptyState }: AgentChatShellProps) {
                     </div>
                   </div>
                 ) : null}
-                {chat.error ? <div className="text-sm text-destructive sm:ml-12">{chat.error.message}</div> : null}
+                <CreditErrorNotice error={chat.error} className="sm:ml-12" />
                 <div ref={endRef} />
               </div>
             )}

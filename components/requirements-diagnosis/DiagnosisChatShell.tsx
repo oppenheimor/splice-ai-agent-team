@@ -4,10 +4,12 @@ import { Bot, Send, Square, SquareUserRound } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import type { AgentManifest } from "@/lib/agent-team/agents/types";
 import { useAgentChat } from "@/lib/agent-team/chat/useAgentChat";
+import { useCreditBalance } from "@/lib/credits/useCreditBalance";
 import type { DiagnosisRecordDto } from "@/lib/requirements-diagnosis/persistence";
 import { MessagePartsRenderer } from "@/components/agent-chat/MessagePartsRenderer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { CreditBalancePill, CreditErrorNotice, CreditSettingsButton } from "@/components/credits/CreditStatus";
 import { cn } from "@/lib/utils";
 import {
   diagnosisAppSurface,
@@ -37,6 +39,7 @@ export function DiagnosisChatShell({ agent, conversationId, sourceDiagnosis }: I
     conversationId: diagnosis?.chatSession?.conversationId || conversationId,
     requestBody,
   });
+  const credit = useCreditBalance();
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -46,6 +49,10 @@ export function DiagnosisChatShell({ agent, conversationId, sourceDiagnosis }: I
   return (
     <main className={diagnosisShell}>
       <section className={diagnosisStage}>
+        <header className="flex items-center justify-end gap-2 py-4">
+          <CreditBalancePill credit={credit} compact />
+          <CreditSettingsButton className="bg-[#f0f0ed]" />
+        </header>
         <article className={`${diagnosisAppSurface} overflow-hidden`}>
           <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
             <section className="mt-6 min-h-0 space-y-4 overflow-auto pr-1">
@@ -57,6 +64,7 @@ export function DiagnosisChatShell({ agent, conversationId, sourceDiagnosis }: I
                     <ChatMessage key={message.id} message={message} addToolOutput={chat.addToolOutput} />
                   ))}
                   {chat.isBusy ? <div className={`${diagnosisPanel} px-4 py-3 text-sm ${diagnosisMutedText}`}>正在整理诊断建议...</div> : null}
+                  <CreditErrorNotice error={chat.error} />
                   <div ref={endRef} />
                 </div>
               )}
@@ -88,7 +96,7 @@ export function DiagnosisChatShell({ agent, conversationId, sourceDiagnosis }: I
                     <Square className="h-4 w-4 fill-current" />
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={!chat.input.trim()} className={`h-12 w-12 p-0 ${diagnosisPrimaryButton}`} aria-label="发送">
+                  <Button type="submit" disabled={!chat.input.trim()} className={`h-12 w-12 p-0 cursor-pointer ${diagnosisPrimaryButton}`} aria-label="发送">
                     <Send className="h-4 w-4" />
                   </Button>
                 )}

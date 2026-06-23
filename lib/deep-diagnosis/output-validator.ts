@@ -33,12 +33,7 @@ const COMPLETE_REPORT_PATTERNS = [
   /现在信息(已经)?够.*完整方案/,
 ] as const;
 
-const HTML_PUBLISH_CLAIM_PATTERNS = [
-  /已生成.*HTML/,
-  /可访问.*链接/,
-  /二维码已生成/,
-  /报告链接/,
-] as const;
+const HTML_PUBLISH_CLAIM_PATTERNS = [/已生成.*HTML/, /可访问.*链接/, /报告链接/] as const;
 
 export function validateDeepDiagnosisOutput({
   responseMessage,
@@ -122,11 +117,11 @@ export function validateDeepDiagnosisOutput({
     });
   }
 
-  if (HTML_PUBLISH_CLAIM_PATTERNS.some((pattern) => pattern.test(text))) {
+  if (HTML_PUBLISH_CLAIM_PATTERNS.some((pattern) => pattern.test(text)) && !hasPublishedHtmlUrl(responseMessage)) {
     violations.push({
       id: "html_publish_claim",
       severity: "warning",
-      message: "publishHtmlReport 真实发布仍在 TODO，不能承诺可访问 HTML 链接或二维码。",
+      message: "没有检测到 publishHtmlReport 返回的线上链接，不能承诺可访问 HTML 链接。",
     });
   }
 
@@ -189,6 +184,12 @@ function extractToolInputs(message: UIMessage, toolName: string): Record<string,
       if ("input" in part && isRecord(part.input)) return part.input;
       return {};
     });
+}
+
+function hasPublishedHtmlUrl(message: UIMessage): boolean {
+  return (message.parts || [])
+    .filter((part) => String(part.type) === "tool-publishHtmlReport")
+    .some((part) => "output" in part && isRecord(part.output) && typeof part.output.url === "string" && part.output.url.length > 0);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

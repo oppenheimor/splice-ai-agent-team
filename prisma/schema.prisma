@@ -23,6 +23,9 @@ model User {
   agentConversations AgentConversation[]
   agentMessages      AgentMessage[]
   agentRuns          AgentRun[]
+  creditAccount      CreditAccount?
+  creditLedgerEntries CreditLedgerEntry[]
+  agentUsageRecords  AgentUsageRecord[]
 
   @@map("users")
 }
@@ -231,4 +234,71 @@ model AgentRun {
   @@index([conversationId, startedAt])
   @@index([status, startedAt])
   @@map("agent_runs")
+}
+
+model CreditAccount {
+  id             String              @id @default(cuid())
+  userId         String              @unique @map("user_id")
+  balance        Int                 @default(0)
+  totalGranted   Int                 @default(0) @map("total_granted")
+  totalConsumed  Int                 @default(0) @map("total_consumed")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledgerEntries  CreditLedgerEntry[]
+
+  @@map("credit_accounts")
+}
+
+model CreditLedgerEntry {
+  id                    String         @id @default(cuid())
+  userId                String         @map("user_id")
+  accountId             String         @map("account_id")
+  type                  String
+  amount                Int
+  balanceAfter          Int            @map("balance_after")
+  reason                String?
+  source                String?
+  relatedConversationId String?        @map("related_conversation_id")
+  relatedAgentRunId     String?        @map("related_agent_run_id")
+  metadata              Json?
+  createdAt             DateTime       @default(now()) @map("created_at")
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account               CreditAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([accountId, createdAt])
+  @@index([type, createdAt])
+  @@index([relatedConversationId])
+  @@map("credit_ledger_entries")
+}
+
+model AgentUsageRecord {
+  id                    String   @id @default(cuid())
+  userId                String   @map("user_id")
+  agentId               String   @map("agent_id")
+  conversationId        String?  @map("conversation_id")
+  agentRunId            String?  @map("agent_run_id")
+  taskType              String   @map("task_type")
+  estimatedCredits      Int      @map("estimated_credits")
+  chargedCredits        Int      @default(0) @map("charged_credits")
+  inputTokensEstimate   Int      @default(0) @map("input_tokens_estimate")
+  outputTokensEstimate  Int      @default(0) @map("output_tokens_estimate")
+  model                 String?
+  toolCallCount         Int      @default(0) @map("tool_call_count")
+  webSearchCount        Int      @default(0) @map("web_search_count")
+  fileCount             Int      @default(0) @map("file_count")
+  hasDeliverable        Boolean  @default(false) @map("has_deliverable")
+  status                String   @default("charged")
+  metadata              Json?
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([agentId, createdAt])
+  @@index([conversationId, createdAt])
+  @@index([agentRunId])
+  @@index([status, createdAt])
+  @@map("agent_usage_records")
 }

@@ -14,6 +14,7 @@ import {
   DataTableTool,
   FrameworkTool,
   GenericTool,
+  hasRenderableChoiceOptions,
   PublishHtmlReportTool,
   ScorecardTool,
   TimelineTool,
@@ -39,7 +40,11 @@ function MessagePartsRendererBase({ parts, addToolOutput, textClassName }: Messa
   const firstOpenChoiceIndex = renderable.findIndex((part) => {
     if (!String(part.type).startsWith("tool-")) return false;
     const toolName = String(part.type).replace(/^tool-/, "");
-    return toolName === "askUserChoice" && "state" in part && part.state !== "output-available";
+    return toolName === "askUserChoice" &&
+      "state" in part &&
+      part.state !== "output-available" &&
+      part.state !== "input-streaming" &&
+      hasRenderableChoiceOptions((part as ToolPartShape).input?.options);
   });
 
   const children = renderable.map((part, index) => {
@@ -66,6 +71,11 @@ function MessagePartsRendererBase({ parts, addToolOutput, textClassName }: Messa
         return <WebSearchTool key={index} data={webSearchOutputs.length === 1 ? webSearchOutputs[0] : webSearchOutputs} />;
       }
       if (toolName === "askUserChoice" && "state" in part && part.state !== "output-available") {
+        const choicePart = part as ToolPartShape;
+        const hasRenderableOptions = hasRenderableChoiceOptions(choicePart.input?.options);
+        if (choicePart.state === "input-streaming" || !hasRenderableOptions) {
+          return <ToolLoading key={index} label="正在整理选项" />;
+        }
         if (firstOpenChoiceIndex !== index) return <DeferredChoice key={index} />;
       }
       return <ToolPart key={index} part={part as ToolPartShape} toolName={toolName} addToolOutput={addToolOutput} />;
@@ -74,19 +84,41 @@ function MessagePartsRendererBase({ parts, addToolOutput, textClassName }: Messa
     return null;
   });
 
-  return <div className="space-y-4">{children}</div>;
+  return <div className="min-w-0 space-y-4">{children}</div>;
 }
 
 export const MessagePartsRenderer = memo(MessagePartsRendererBase);
 
 const markdownMessageClassName =
-  "space-y-3 text-sm leading-7 [&_a]:font-medium [&_a]:text-primary [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.92em] [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold [&_ol]:ml-5 [&_ol]:list-decimal [&_ol]:space-y-1 [&_p]:m-0 [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_th]:px-2 [&_th]:py-1.5 [&_ul]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1";
+  "min-w-0 space-y-3 text-sm leading-7 [&_a]:break-words [&_a]:font-medium [&_a]:text-primary [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_code]:break-words [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.92em] [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold [&_ol]:ml-5 [&_ol]:list-decimal [&_ol]:space-y-1 [&_p]:m-0 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-3 [&_pre_code]:whitespace-pre [&_ul]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1";
 
 const MarkdownMessage = memo(function MarkdownMessage({ content, className }: { content: string; className?: string }) {
   if (!content) return <p className={cn("text-sm text-muted-foreground", className)}>正在生成...</p>;
   return (
     <div className={cn(markdownMessageClassName, className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeSanitize]}
+        components={{
+          table: ({ children }) => (
+            <div className="max-w-full overflow-x-auto overscroll-x-contain">
+              <table className="w-max min-w-[560px] border-collapse text-sm">
+                {children}
+              </table>
+            </div>
+          ),
+          th: ({ children }) => (
+            <th className="border border-border bg-muted px-3 py-2 text-left font-semibold text-[#171717]">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="border border-border px-3 py-2 align-top text-[#171717]">
+              <span className="block whitespace-normal break-words">{children}</span>
+            </td>
+          ),
+        }}
+      >
         {content}
       </ReactMarkdown>
     </div>

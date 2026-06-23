@@ -26,6 +26,7 @@ export function buildDeepDiagnosisDecisionState(messages: UIMessage[]): DeepDiag
     hasHypothesisTree: progress.hasHypothesisTree,
     hasEvidenceCoverage: progress.hasEvidenceCoverage,
     hasQualityGate: progress.hasQualityGate,
+    hasCurrentDeliverableReady: runtimeState.deliverableReadiness.canOfferPublish,
     hasDeepDiveDirection: progress.hasDeepDiveDirection,
     hasGenerateReportIntent: progress.hasGenerateReportIntent,
     hasToolFailure: progress.hasToolFailure,

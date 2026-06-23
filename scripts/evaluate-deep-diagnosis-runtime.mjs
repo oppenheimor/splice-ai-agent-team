@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 const toolGuardSource = readFileSync(new URL("../lib/deep-diagnosis/tool-guard.ts", import.meta.url), "utf8");
 const outputValidatorSource = readFileSync(new URL("../lib/deep-diagnosis/output-validator.ts", import.meta.url), "utf8");
 const reportQualitySource = readFileSync(new URL("../lib/deep-diagnosis/report-quality.ts", import.meta.url), "utf8");
+const deliverableReadinessSource = readFileSync(new URL("../lib/deep-diagnosis/deliverable-readiness.ts", import.meta.url), "utf8");
 const runtimeStateSource = readFileSync(new URL("../lib/deep-diagnosis/runtime-state.ts", import.meta.url), "utf8");
 const decisionStateSource = readFileSync(new URL("../lib/deep-diagnosis/decision/state.ts", import.meta.url), "utf8");
 const contextManagerSource = readFileSync(new URL("../lib/deep-diagnosis/context-manager.ts", import.meta.url), "utf8");
@@ -76,9 +77,17 @@ const checks = [
     name: "运行状态快照聚合事实证据就绪质量",
     passed: runtimeStateSource.includes("buildDeepDiagnosisFactCard")
       && runtimeStateSource.includes("buildDeepDiagnosisEvidenceView")
+      && runtimeStateSource.includes("evaluateDeepDiagnosisDeliverableReadiness")
       && runtimeStateSource.includes("evaluateDeepDiagnosisReportReadiness")
       && runtimeStateSource.includes("buildDeepDiagnosisRuntimeQualityGate"),
-    missing: ["fact card", "evidence view", "report readiness", "quality gate"],
+    missing: ["fact card", "evidence view", "deliverable readiness", "report readiness", "quality gate"],
+  },
+  {
+    name: "当前可交付物发布必须两段式确认",
+    passed: deliverableReadinessSource.includes("canOfferPublish")
+      && deliverableReadinessSource.includes("confirmedToPublish")
+      && deliverableReadinessSource.includes("发布 HTML 前必须先让用户明确确认"),
+    missing: ["canOfferPublish", "confirmedToPublish", "发布前确认"],
   },
   {
     name: "Decision State 从结构化状态派生",

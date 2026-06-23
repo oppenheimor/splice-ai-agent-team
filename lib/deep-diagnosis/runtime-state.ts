@@ -1,8 +1,10 @@
 import type { UIMessage } from "ai";
+import { evaluateDeepDiagnosisDeliverableReadiness, type DeepDiagnosisDeliverableReadinessSnapshot } from "./deliverable-readiness";
 import { buildDeepDiagnosisEvidenceView, type DeepDiagnosisEvidenceView } from "./evidence-view";
 import { buildDeepDiagnosisFactCard, type DeepDiagnosisFactCard } from "./fact-card";
 import { evaluateDeepDiagnosisReportReadiness, type DeepDiagnosisReportReadinessSnapshot } from "./report-readiness";
 import { buildDeepDiagnosisRuntimeQualityGate, type DeepDiagnosisRuntimeQualityGate } from "./runtime-quality-gate";
+import { extractDeepDiagnosisRuntimeEvents, normalizeWhitespace, type DeepDiagnosisRuntimeEvents } from "./runtime-events";
 import type { DeepDiagnosisState } from "./state-machine";
 
 export type DeepDiagnosisEntryRouteState = {
@@ -33,6 +35,7 @@ export type DeepDiagnosisProgressState = {
   hasDeepDiveDirection: boolean;
   hasGenerateReportIntent: boolean;
   hasToolFailure: boolean;
+  externalResearchRequired: boolean;
 };
 
 export type DeepDiagnosisStateGateSnapshot = {
@@ -45,11 +48,14 @@ export type DeepDiagnosisStateGateSnapshot = {
 export type DeepDiagnosisRuntimeStateSnapshot = {
   currentState: DeepDiagnosisState;
   transcript: string;
+  userTranscript: string;
+  assistantTranscript: string;
   entryRoute: DeepDiagnosisEntryRouteState;
   openContext: DeepDiagnosisOpenContextState;
   progress: DeepDiagnosisProgressState;
   factCard: DeepDiagnosisFactCard;
   evidenceView: DeepDiagnosisEvidenceView;
+  deliverableReadiness: DeepDiagnosisDeliverableReadinessSnapshot;
   reportReadiness: DeepDiagnosisReportReadinessSnapshot;
   qualityGate: DeepDiagnosisRuntimeQualityGate;
   stateGates: DeepDiagnosisStateGateSnapshot[];
@@ -76,25 +82,30 @@ const OPEN_CONTEXT_SIGNAL_DEFINITIONS = [
 ] as const;
 
 export function buildDeepDiagnosisRuntimeState(messages: UIMessage[]): DeepDiagnosisRuntimeStateSnapshot {
-  const transcript = normalizeWhitespace(extractConversationText(messages));
-  const entryRoute = buildEntryRouteState(transcript);
-  const openContext = buildOpenContextState(transcript);
+  const events = extractDeepDiagnosisRuntimeEvents(messages);
+  const transcript = events.allText;
+  const entryRoute = buildEntryRouteState(events);
+  const openContext = buildOpenContextState(events.userText);
   const factCard = buildDeepDiagnosisFactCard(messages);
   const evidenceView = buildDeepDiagnosisEvidenceView(messages);
+  const deliverableReadiness = evaluateDeepDiagnosisDeliverableReadiness(messages);
   const reportReadiness = evaluateDeepDiagnosisReportReadiness(messages);
   const qualityGate = buildDeepDiagnosisRuntimeQualityGate(messages);
-  const progress = buildProgressState(transcript, evidenceView, qualityGate);
+  const progress = buildProgressState(events, evidenceView, qualityGate);
   const stateGates = buildStateGateSnapshots({ entryRoute, openContext, progress, factCard, evidenceView, reportReadiness, qualityGate });
   const blockingGates = stateGates.filter((gate) => gate.status === "blocked");
 
   return {
     currentState: resolveCurrentState(stateGates),
     transcript,
+    userTranscript: events.userText,
+    assistantTranscript: events.assistantText,
     entryRoute,
     openContext,
     progress,
     factCard,
     evidenceView,
+    deliverableReadiness,
     reportReadiness,
     qualityGate,
     stateGates,
@@ -124,13 +135,19 @@ export function formatDeepDiagnosisRuntimeStateForPrompt(snapshot: DeepDiagnosis
   ].join("\n");
 }
 
-function buildEntryRouteState(transcript: string): DeepDiagnosisEntryRouteState {
-  const selectedOverviewScan = /先全局盘点|overview_scan/.test(transcript);
-  const selectedFocusedDeepDive = /聚焦一个问题|focused_deep_dive/.test(transcript);
-  const selectedAssistedClarification = /还说不清楚|assisted_clarification/.test(transcript);
+function buildEntryRouteState(events: DeepDiagnosisRuntimeEvents): DeepDiagnosisEntryRouteState {
+  const selectedOverviewScan = events.choiceSelectionIds.includes("overview_scan")
+    || events.choiceSelectionLabels.includes("先全局盘点")
+    || /我(想|要|先).*全局盘点|先全局盘点/.test(events.userText);
+  const selectedFocusedDeepDive = events.choiceSelectionIds.includes("focused_deep_dive")
+    || events.choiceSelectionLabels.includes("聚焦一个问题")
+    || /我(想|要).*聚焦|聚焦一个问题|只看一个问题/.test(events.userText);
+  const selectedAssistedClarification = events.choiceSelectionIds.includes("assisted_clarification")
+    || events.choiceSelectionLabels.includes("还说不清楚")
+    || /还说不清楚|我也说不清|不知道从哪/.test(events.userText);
 
   return {
-    hasScopeRoute: selectedOverviewScan || selectedFocusedDeepDive || selectedAssistedClarification || /入口范围路由/.test(transcript),
+    hasScopeRoute: selectedOverviewScan || selectedFocusedDeepDive || selectedAssistedClarification,
     selectedOverviewScan,
     selectedFocusedDeepDive,
     selectedAssistedClarification,
@@ -165,18 +182,26 @@ function buildOpenContextState(transcript: string): DeepDiagnosisOpenContextStat
 }
 
 function buildProgressState(
-  transcript: string,
+  events: DeepDiagnosisRuntimeEvents,
   evidenceView: DeepDiagnosisEvidenceView,
   qualityGate: DeepDiagnosisRuntimeQualityGate,
 ): DeepDiagnosisProgressState {
+  const assistantText = events.assistantText;
+  const userText = events.userText;
+  const externalResearchRequired = evidenceView.hasCoverage
+    || events.webSearchOutputs.length > 0
+    || hasAffirmativeExternalResearchRequest(userText);
+
   return {
-    hasHorizontalScan: /横向扫描|候选业务环节|至少\s*3\s*个候选|可比较评分/.test(transcript),
-    hasHypothesisTree: /假设树|根问题|原因分支|要查什么数据|如果不是/.test(transcript),
+    hasHorizontalScan: hasCompletedHorizontalScan(assistantText),
+    hasHypothesisTree: /假设树[\s\S]*根问题[\s\S]*原因分支[\s\S]*要查什么数据[\s\S]*如果不是/.test(assistantText),
     hasEvidenceCoverage: evidenceView.hasCoverage && evidenceView.hasCounterEvidence,
-    hasQualityGate: qualityGate.hasReportLikeOutput || /报告质量 Gate|完整性评分|质量分|110\s*分|低于\s*90\s*分/.test(transcript),
-    hasDeepDiveDirection: /深挖方向|本轮方向|用户选择的深挖方向|聚焦/.test(transcript),
-    hasGenerateReportIntent: /generate_report|出完整方案|出本轮专项方案|出获客专项方案|完整诊断书/.test(transcript),
-    hasToolFailure: evidenceView.hasToolFailure || /工具失败|无法联网|搜索结果不足|空结果|warning|error/i.test(transcript),
+    hasQualityGate: qualityGate.hasReportLikeOutput && /当前级别可用度|完整诊断书成熟度|报告质量 Gate|完整性评分|质量分/.test(assistantText),
+    hasDeepDiveDirection: /深挖方向|本轮方向|用户选择的深挖方向/.test(assistantText)
+      || /聚焦|只看|深挖/.test(userText),
+    hasGenerateReportIntent: hasAffirmativeGenerateReportIntent(events),
+    hasToolFailure: evidenceView.hasToolFailure || /工具失败|无法联网|搜索结果不足|空结果/i.test(assistantText),
+    externalResearchRequired,
   };
 }
 
@@ -193,7 +218,7 @@ function buildStateGateSnapshots(input: {
     createGate("scope_selection", "诊断范围等级", input.entryRoute.hasScopeRoute ? [] : ["入口范围路由"]),
     createGate("entry", "业务上下文收集", input.openContext.missingLabels),
     createGate("horizontal_scan", "横向扫描门禁", input.progress.hasHorizontalScan ? [] : ["至少 3 个候选业务环节", "可比较评分"]),
-    createGate("external_research", "外部证据门禁", input.evidenceView.unverifiedGaps),
+    createGate("external_research", "外部证据门禁", input.progress.externalResearchRequired ? input.evidenceView.unverifiedGaps : []),
     createGate("fact_confirmation", "关键事实确认", input.factCard.confirmationState === "confirmed" || input.factCard.confirmationState === "skipped" ? [] : ["用户确认或显式跳过事实卡"]),
     createGate("report_delivery", "完整报告就绪", input.reportReadiness.ready ? [] : [
       ...input.reportReadiness.missingMinimumFactLabels,
@@ -250,17 +275,6 @@ function extractPreviousValidationBlockers(messages: UIMessage[]): string[] {
     .slice(-6);
 }
 
-function extractConversationText(messages: UIMessage[]): string {
-  return messages
-    .flatMap((message) => message.parts || [])
-    .map((part) => {
-      if (part.type === "text" && "text" in part) return String(part.text || "");
-      if (String(part.type).startsWith("tool-")) return JSON.stringify(part);
-      return "";
-    })
-    .join("\n");
-}
-
 function formatSignal(signal: RuntimeSignalState): string {
   return signal.present ? "已识别" : "缺失";
 }
@@ -269,6 +283,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
+function hasCompletedHorizontalScan(text: string): boolean {
+  const candidateCount = (text.match(/候选(?:业务|岗位)?环节|候选项|候选方向/g) || []).length;
+  return /横向扫描/.test(text)
+    && /可比较评分|评分分解矩阵|总分/.test(text)
+    && /为什么不是其它环节/.test(text)
+    && (candidateCount >= 1 || /至少\s*3\s*个候选/.test(text));
+}
+
+function hasAffirmativeGenerateReportIntent(events: DeepDiagnosisRuntimeEvents): boolean {
+  if (events.choiceSelectionIds.includes("generate_report")) return true;
+  if (events.choiceSelectionLabels.some((label) => /出完整方案|出本轮专项方案|出.*专项方案/.test(label))) return true;
+  if (/不要|先别|不急|暂时不/.test(events.userText) && /完整方案|完整诊断书|报告/.test(events.userText)) return false;
+  return /出完整方案|生成完整方案|拿完整方案|出本轮专项方案|出.*专项方案/.test(events.userText);
+}
+
+function hasAffirmativeExternalResearchRequest(text: string): boolean {
+  if (/不要.*(行业|外部|竞品|案例|趋势|市场)|不用.*(行业|外部|竞品|案例|趋势|市场)/.test(text)) return false;
+  return /行业|外部资料|竞品|案例|趋势|市场数据|同类企业/.test(text);
 }

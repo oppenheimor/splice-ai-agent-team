@@ -8,6 +8,7 @@ const CHOICE_ACTIONS = new Set<DeepDiagnosisDecision["nextAction"]>([
   "ask_missing_facts",
   "offer_special_report",
   "offer_complete_report",
+  "offer_current_deliverable_publish",
 ]);
 
 export type DeepDiagnosisToolGuardResult = {

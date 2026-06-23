@@ -14,6 +14,8 @@ export type DeepDiagnosisNextAction =
   | "offer_hypothesis_brief"
   | "offer_special_report"
   | "offer_complete_report"
+  | "offer_current_deliverable_publish"
+  | "publish_current_deliverable"
   | "generate_report";
 
 export type DeepDiagnosisInputMode =
@@ -38,6 +40,7 @@ export type DeepDiagnosisDecisionState = {
   hasHypothesisTree: boolean;
   hasEvidenceCoverage: boolean;
   hasQualityGate: boolean;
+  hasCurrentDeliverableReady: boolean;
   hasDeepDiveDirection: boolean;
   hasGenerateReportIntent: boolean;
   hasToolFailure: boolean;

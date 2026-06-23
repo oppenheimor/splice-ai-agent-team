@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, ExternalLink, Search, ShieldCheck, Sparkles } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { AguiEmptyState, AguiStatusBadge } from "./agui-ui";
 
 type WebSearchResult = {
   title?: string;
@@ -39,21 +39,19 @@ export function WebSearchTool({ data }: { data: unknown }) {
   const sourceSummary = output.results.length ? `已参考 ${output.results.length} 个公开来源` : "外部资料检索";
 
   return (
-    <Card className="overflow-hidden border-[#eaeaea] bg-white shadow-[0_1px_1px_rgba(0,0,0,0.02),0_8px_16px_-8px_rgba(0,0,0,0.06)]">
-      <div className="border-b border-[#eaeaea] bg-white px-4 py-3">
+    <section className="overflow-hidden rounded-xl border border-[#d6e7ff] bg-[#f8fbff] shadow-[0_1px_1px_rgba(0,0,0,0.02),0_8px_16px_-10px_rgba(0,0,0,0.08)]">
+      <div className="border-b border-[#d6e7ff] bg-white px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#eaeaea] bg-[#fafafa] text-[#171717]">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#d6e7ff] bg-[#f0f7ff] text-[#0059ec]">
               <Search className="h-4 w-4" />
             </span>
             <div className="min-w-0">
-              <strong className="block text-sm font-medium text-[#171717]">外部资料</strong>
+              <strong className="block text-sm font-semibold text-[#171717]">外部证据检索</strong>
               <p className="mt-0.5 truncate text-xs text-[#666666]">{sourceSummary}</p>
             </div>
           </div>
-          <span className={output.warning ? "rounded-full border border-[#ffd7d6] bg-[#ffeeef] px-2.5 py-1 text-xs font-medium text-[#d8001b]" : "rounded-full border border-[#b9f5bc] bg-[#ecfdec] px-2.5 py-1 text-xs font-medium text-[#107d32]"}>
-            {output.warning ? "需复核" : "已完成"}
-          </span>
+          <AguiStatusBadge status={output.warning ? "warning" : output.results.length ? "success" : "empty"} />
         </div>
       </div>
 
@@ -96,7 +94,9 @@ export function WebSearchTool({ data }: { data: unknown }) {
           </div>
         ) : null}
 
-        {visibleResults.length ? (
+        {!visibleResults.length ? (
+          <AguiEmptyState title="暂无外部来源" description="当前检索没有返回可展示来源，不能把摘要当作强证据使用。" />
+        ) : (
           <div className="grid gap-2">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-medium text-[#666666]">主要来源</span>
@@ -125,9 +125,9 @@ export function WebSearchTool({ data }: { data: unknown }) {
               </details>
             ) : null}
           </div>
-        ) : null}
+        )}
       </div>
-    </Card>
+    </section>
   );
 }
 

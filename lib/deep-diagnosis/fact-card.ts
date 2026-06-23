@@ -1,4 +1,5 @@
 import type { UIMessage } from "ai";
+import { extractDeepDiagnosisRuntimeEvents, normalizeWhitespace } from "./runtime-events";
 
 export type DeepDiagnosisFactCard = {
   confirmedFacts: string[];
@@ -8,13 +9,16 @@ export type DeepDiagnosisFactCard = {
 };
 
 export function buildDeepDiagnosisFactCard(messages: UIMessage[]): DeepDiagnosisFactCard {
-  const transcript = normalizeWhitespace(extractConversationText(messages));
+  const events = extractDeepDiagnosisRuntimeEvents(messages);
+  const transcript = normalizeWhitespace(events.assistantText);
   const confirmedFacts = extractFactBucket(transcript, "已确认事实", ["待确认事实", "未覆盖区域", "完整报告就绪", "报告质量"]);
   const pendingFacts = extractFactBucket(transcript, "待确认事实", ["未覆盖区域", "完整报告就绪", "报告质量", "现在信息", "你想"]);
   const uncoveredAreas = extractFactBucket(transcript, "未覆盖区域", ["完整报告就绪", "报告质量", "现在信息", "你想", "出完整方案", "出本轮专项方案"]);
   const hasBuckets = transcript.includes("已确认事实") && transcript.includes("待确认事实") && transcript.includes("未覆盖区域");
-  const skipped = /显式跳过|用户跳过关键事实确认|先按假设/.test(transcript);
-  const confirmed = /用户确认|确认以上|事实准确|可以用于生成报告/.test(transcript);
+  const userConfirmationText = events.userText;
+  const skipped = /显式跳过|跳过关键事实|先按假设|按假设简报/.test(userConfirmationText);
+  const confirmed = pendingFacts.length === 0
+    && /确认以上|事实准确|可以用于生成报告|没有要补充/.test(userConfirmationText);
 
   return {
     confirmedFacts,
@@ -60,16 +64,4 @@ function extractFactBucket(transcript: string, marker: string, endMarkers: strin
     .map((item) => item.trim())
     .filter((item) => item.length > 1)
     .slice(0, 8);
-}
-
-function extractConversationText(messages: UIMessage[]): string {
-  return messages
-    .flatMap((message) => message.parts || [])
-    .filter((part) => part.type === "text" && "text" in part)
-    .map((part) => String(part.text || ""))
-    .join("\n");
-}
-
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
 }

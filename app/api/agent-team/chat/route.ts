@@ -16,6 +16,14 @@ import {
 import { pickExternalTools } from "@/lib/agent-team/external-tools";
 import { buildRuntimeContext } from "@/lib/agent-team/runtime-context";
 import { buildDeepDiagnosisManagedContext } from "@/lib/deep-diagnosis/context-manager";
+import {
+  attachRunToCreditCharge,
+  chargeCreditsForAgentRequest,
+  InsufficientCreditsError,
+  markCreditChargeCompleted,
+  refundCreditCharge,
+  type ChargedCreditUsage,
+} from "@/lib/credits/service";
 import { decideNextDeepDiagnosisAction } from "@/lib/deep-diagnosis/decision";
 import {
   attachDeepDiagnosisValidationMetadata,
@@ -72,6 +80,7 @@ export async function POST(request: NextRequest) {
   }
 
   let runId: string | null = null;
+  let creditCharge: ChargedCreditUsage | null = null;
 
   try {
     const diagnosis = agent.id === "deep-diagnosis" && input.quizResultId
@@ -84,6 +93,14 @@ export async function POST(request: NextRequest) {
     if (!conversationId) {
       return Response.json({ error: "缺少 conversationId。" }, { status: 400 });
     }
+
+    creditCharge = await chargeCreditsForAgentRequest({
+      userId: user.id,
+      agentId: agent.id,
+      conversationId,
+      model,
+      messages,
+    });
 
     await recordChatMessages({
       agent,
@@ -116,6 +133,13 @@ export async function POST(request: NextRequest) {
       inputMessageCount: messages.length,
       decision: deepDiagnosisDecision,
     });
+    if (runId) {
+      await attachRunToCreditCharge({
+        usageRecordId: creditCharge.usageRecordId,
+        ledgerEntryId: creditCharge.ledgerEntryId,
+        agentRunId: runId,
+      });
+    }
     console.log(buildSystemPrompt(agent, diagnosis?.context))
     const systemMessages = [
       { role: "system" as const, content: buildSystemPrompt(agent, diagnosis?.context) },
@@ -174,10 +198,23 @@ export async function POST(request: NextRequest) {
             status: "completed",
           });
         }
+
+        if (creditCharge) {
+          await markCreditChargeCompleted(creditCharge.usageRecordId);
+        }
       },
       consumeSseStream: consumeStream,
     });
   } catch (error) {
+    if (creditCharge) {
+      await refundCreditCharge({
+        userId: user.id,
+        ledgerEntryId: creditCharge.ledgerEntryId,
+        usageRecordId: creditCharge.usageRecordId,
+        reason: "Agent 生成失败，退回本次预扣积分",
+      });
+    }
+
     if (runId) {
       await finishAgentRun({
         runId,
@@ -186,6 +223,18 @@ export async function POST(request: NextRequest) {
         errorMessage: error instanceof Error ? error.message : "生成失败",
       });
     }
+
+    if (error instanceof InsufficientCreditsError) {
+      return Response.json(
+        {
+          error: `积分余额不足，本次预计需要 ${error.requiredCredits} 积分，当前余额 ${error.currentBalance} 积分。`,
+          requiredCredits: error.requiredCredits,
+          currentBalance: error.currentBalance,
+        },
+        { status: 402 },
+      );
+    }
+
     console.error("[agent-team] chat generation failed", error);
     return Response.json({ error: error instanceof Error ? error.message : "生成失败，请稍后再试。" }, { status: 500 });
   }

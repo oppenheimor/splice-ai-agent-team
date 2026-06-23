@@ -1,4 +1,5 @@
 import type { UIMessage } from "ai";
+import { extractDeepDiagnosisRuntimeEvents, normalizeWhitespace } from "./runtime-events";
 
 type MinimumFactSignal = {
   id: string;
@@ -101,13 +102,16 @@ export function buildDeepDiagnosisReportReadinessContext(messages: UIMessage[]):
 }
 
 export function evaluateDeepDiagnosisReportReadiness(messages: UIMessage[]): DeepDiagnosisReportReadinessSnapshot {
-  const transcript = normalizeWhitespace(extractConversationText(messages));
+  const events = extractDeepDiagnosisRuntimeEvents(messages);
+  const transcript = normalizeWhitespace(events.allText);
+  const assistantTranscript = normalizeWhitespace(events.assistantText);
+  const userTranscript = normalizeWhitespace(events.userText);
   const missingMinimumFactLabels = MINIMUM_FACT_SIGNALS
     .filter((signal) => !signal.patterns.some((pattern) => pattern.test(transcript)))
     .map((signal) => signal.label);
-  const keyFactsConfirmed = hasKeyFactConfirmation(transcript);
-  const hasBlockingPendingFacts = hasUnresolvedPendingFacts(transcript);
-  const hasUncoveredAreas = hasNonEmptyUncoveredAreas(transcript);
+  const hasBlockingPendingFacts = hasUnresolvedPendingFacts(assistantTranscript, userTranscript);
+  const keyFactsConfirmed = hasKeyFactConfirmation(assistantTranscript, userTranscript);
+  const hasUncoveredAreas = hasNonEmptyUncoveredAreas(assistantTranscript);
   const reverseSelectionReasonConfirmed = hasReverseSelectionReasonConfirmed(transcript);
 
   return {
@@ -123,22 +127,22 @@ export function evaluateDeepDiagnosisReportReadiness(messages: UIMessage[]): Dee
   };
 }
 
-function hasKeyFactConfirmation(transcript: string): boolean {
-  const hasFactBuckets = ["已确认事实", "待确认事实", "未覆盖区域"].every((signal) => transcript.includes(signal));
-  const hasUserConfirmation = /用户确认|确认以上|事实准确|可以用于生成报告|显式跳过|用户跳过关键事实确认/.test(transcript);
-  return hasFactBuckets && hasUserConfirmation && !hasUnresolvedPendingFacts(transcript);
+function hasKeyFactConfirmation(assistantTranscript: string, userTranscript: string): boolean {
+  const hasFactBuckets = ["已确认事实", "待确认事实", "未覆盖区域"].every((signal) => assistantTranscript.includes(signal));
+  const hasUserConfirmation = /确认以上|事实准确|可以用于生成报告|没有要补充|显式跳过|跳过关键事实|按假设简报/.test(userTranscript);
+  return hasFactBuckets && hasUserConfirmation && !hasUnresolvedPendingFacts(assistantTranscript, userTranscript);
 }
 
-function hasUnresolvedPendingFacts(transcript: string): boolean {
+function hasUnresolvedPendingFacts(assistantTranscript: string, userTranscript: string): boolean {
   const marker = "待确认事实";
-  const pendingIndex = transcript.lastIndexOf(marker);
+  const pendingIndex = assistantTranscript.lastIndexOf(marker);
 
   if (pendingIndex === -1) {
     return false;
   }
 
-  const laterTranscript = transcript.slice(pendingIndex);
-  const explicitSkip = /显式跳过|用户跳过关键事实确认|跳过待确认事实|先按假设|按假设简报/.test(laterTranscript);
+  const laterTranscript = assistantTranscript.slice(pendingIndex);
+  const explicitSkip = /显式跳过|跳过待确认事实|跳过关键事实|先按假设|按假设简报/.test(userTranscript);
 
   if (explicitSkip) {
     return false;
@@ -187,16 +191,4 @@ function hasReverseSelectionReasonConfirmed(transcript: string): boolean {
   }
 
   return /反选原因已确认|坚持这个方向的原因|用户确认.*原因|原因是/.test(transcript);
-}
-
-function extractConversationText(messages: UIMessage[]): string {
-  return messages
-    .flatMap((message) => message.parts || [])
-    .filter((part) => part.type === "text" && "text" in part)
-    .map((part) => String(part.text || ""))
-    .join("\n");
-}
-
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
 }

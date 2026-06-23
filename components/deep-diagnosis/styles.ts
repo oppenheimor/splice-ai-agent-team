@@ -66,14 +66,8 @@ export const deepDiagnosisIconSurface =
 export const deepDiagnosisAgentMark =
   "relative grid shrink-0 place-items-center overflow-hidden rounded-full border border-[#d9d9d9] bg-[linear-gradient(145deg,#ffffff_0%,#f4f4f4_52%,#ececec_100%)] text-[#171717] shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_1px_2px_rgba(0,0,0,0.08)]";
 
-export const deepDiagnosisUserMark =
-  "relative grid shrink-0 place-items-center overflow-hidden rounded-full border border-[#262626] bg-[#171717] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_1px_2px_rgba(0,0,0,0.16)]";
-
 export const deepDiagnosisMarkGrid =
   "absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(23,23,23,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(23,23,23,0.08)_1px,transparent_1px)] [background-size:8px_8px]";
-
-export const deepDiagnosisUserMarkGrid =
-  "absolute inset-0 opacity-[0.22] [background-image:linear-gradient(rgba(255,255,255,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.16)_1px,transparent_1px)] [background-size:8px_8px]";
 
 export const deepDiagnosisMessageEnter =
   "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-200 motion-reduce:animate-none";
