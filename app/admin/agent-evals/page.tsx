@@ -40,7 +40,7 @@ export default async function AgentEvalAdminPage({ searchParams }: { searchParam
                 <ArrowUpRight className="h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild className="rounded-full bg-[#171717] shadow-none hover:bg-black">
+            <Button asChild className="rounded-full bg-[#171717] shadow-none hover:bg-black text-white!">
               <Link href="#export-command">
                 导出样本
                 <FileDown className="h-4 w-4" />
