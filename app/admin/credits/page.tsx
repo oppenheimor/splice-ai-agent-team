@@ -80,13 +80,13 @@ export default async function CreditAdminPage({ searchParams }: CreditAdminPageP
                 <UserPlus className="h-5 w-5" />
                 增加积分
               </CardTitle>
-              <CardDescription>用户名会自动转成小写匹配。</CardDescription>
+              <CardDescription>用户名区分大小写，请输入完整账号名。</CardDescription>
             </CardHeader>
             <CardContent>
               <form action="/agent-team/api/admin/credits/grant" method="post" className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="targetUsername">用户名</Label>
-                  <Input id="targetUsername" name="targetUsername" placeholder="例如 paul" required />
+                  <Input id="targetUsername" name="targetUsername" placeholder="例如 Paul" required />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="credits">增加积分</Label>

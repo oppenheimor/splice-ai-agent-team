@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
-import { buildRequestUrl } from "@/lib/http/request-origin";
 import { grantCreditsToUsername } from "@/lib/credits/service";
 
 export async function POST(request: NextRequest) {
@@ -8,7 +7,7 @@ export async function POST(request: NextRequest) {
 
   if (!adminUser) {
     return NextResponse.redirect(
-      buildRequestUrl(request, "/agent-team/login?redirect_url=/admin/credits"),
+      new URL("/agent-team/login?redirect_url=/admin/credits", request.url),
     );
   }
 
@@ -39,7 +38,7 @@ export async function POST(request: NextRequest) {
 }
 
 function buildAdminCreditsUrl(request: NextRequest, key: "success" | "error", value: string) {
-  const url = buildRequestUrl(request, "/agent-team/admin/credits");
+  const url = new URL("/agent-team/admin/credits", request.url);
   url.searchParams.set(key, value);
   return url;
 }

@@ -1,40 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME } from "@/lib/auth/cookies";
-import { buildRequestUrl } from "@/lib/http/request-origin";
+import { APP_BASE_PATH } from "@/utils/routing";
 
-const protectedPathPrefixes = [
-  "/agent-team/admin",
-  "/agent-team/credits",
-  "/agent-team/deep-diagnosis",
-  "/agent-team/requirements-diagnosis",
-  "/agent-team/settings",
-  "/agent-team/treasure/hunt",
-  "/credits",
-  "/deep-diagnosis",
-  "/requirements-diagnosis",
-  "/settings",
-  "/treasure/hunt",
+// 要放行的路径
+const PUBLIC_APP_PATHS = [
+  "/login",
+  "/api/auth/password/login",
+  "/api/auth/password/register",
 ];
 
+export const config = {
+  // 配置要走 proxy 的路径，排除静态资源
+  matcher: [
+    "/",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|txt|xml|json)).*)",
+  ],
+};
+
+function isPublicAppPath(appPath: string): boolean {
+  return PUBLIC_APP_PATHS.some((path) => appPath === path || appPath.startsWith(`${path}/`));
+}
+
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const isRequirementsDemoPath = pathname.startsWith("/requirements-diagnosis/demo-") ||
-    pathname.startsWith("/agent-team/requirements-diagnosis/demo-");
-  const isRequirementsAssetPath = pathname.startsWith("/requirements-diagnosis/avatars/") ||
-    pathname.startsWith("/agent-team/requirements-diagnosis/avatars/");
-  const isDeepDiagnosisDemoPath = pathname.startsWith("/deep-diagnosis/agui-demo") ||
-    pathname.startsWith("/agent-team/deep-diagnosis/agui-demo");
+  // Next 在 proxy 中暴露的是去掉 basePath 后的 app path。
+  const appPath = request.nextUrl.pathname;
 
-  // 样品墙是静态设计预览，不读用户数据；跳过登录保护，避免污染正式功能验收。
-  if (isRequirementsDemoPath || isRequirementsAssetPath || isDeepDiagnosisDemoPath) {
-    return NextResponse.next();
-  }
-
-  const isProtectedPath = protectedPathPrefixes.some((prefix) =>
-    pathname.startsWith(prefix),
-  );
-
-  if (!isProtectedPath) {
+  if (isPublicAppPath(appPath)) {
     return NextResponse.next();
   }
 
@@ -44,24 +35,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const loginUrl = buildRequestUrl(request, "/agent-team/login");
-  loginUrl.searchParams.set("redirect_url", `${pathname}${request.nextUrl.search}`);
+  // 在登录的 url 上带上登录成功后要重定向的源地址
+  const loginUrl = new URL(`${APP_BASE_PATH}/login`, request.url);
+  loginUrl.searchParams.set("redirect_url", `${appPath}${request.nextUrl.search}`);
 
   return NextResponse.redirect(loginUrl);
 }
-
-export const config = {
-  matcher: [
-    "/agent-team/admin/:path*",
-    "/agent-team/credits/:path*",
-    "/agent-team/deep-diagnosis/:path*",
-    "/agent-team/requirements-diagnosis/:path*",
-    "/agent-team/settings/:path*",
-    "/agent-team/treasure/hunt/:path*",
-    "/credits/:path*",
-    "/deep-diagnosis/:path*",
-    "/requirements-diagnosis/:path*",
-    "/settings/:path*",
-    "/treasure/hunt/:path*",
-  ],
-};

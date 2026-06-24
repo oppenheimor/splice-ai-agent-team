@@ -1,101 +1,118 @@
 import Link from "next/link";
-import { ArrowRight, Coins, LogOut, MessageSquareText, SearchCheck, Settings, Sparkles } from "lucide-react";
+import { ArrowRight, Compass, LogOut, MessageSquareText, SearchCheck } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+const agents = [
+  {
+    name: "初步诊断",
+    suffix: "Agent",
+    href: "/requirements-diagnosis",
+    icon: SearchCheck,
+    meta: "业务现状 / AI 优先级",
+    description: "用结构化问题快速判断，适合先摸清方向。",
+  },
+  {
+    name: "深度诊断",
+    suffix: "Agent",
+    href: "/deep-diagnosis",
+    icon: MessageSquareText,
+    meta: "业务现场 / 落地路径",
+    description: "持续追问和收束，适合认真推演一件事。",
+  },
+  {
+    name: "寻宝游戏",
+    suffix: "Agent",
+    href: "/treasure/hunt",
+    icon: Compass,
+    meta: "生日聚会 / 创意策划",
+    description: "把一个惊喜活动变成能照着执行的路线。",
+  },
+] as const;
 
 export default async function Home() {
   const user = await getCurrentUser();
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background via-background to-muted/40 px-6 py-10 text-foreground">
-      <section className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <div className="flex items-center gap-3">
-          <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs font-semibold">
-            Splice Agent Team
-          </Badge>
-          <span className="text-sm text-muted-foreground">Tailwind + shadcn UI</span>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
-          <div className="space-y-5">
-            <h1 className="max-w-4xl text-4xl font-semibold leading-[0.95] tracking-tight text-balance sm:text-6xl lg:text-7xl">
-              面向多 Agent 产品的工作台
-            </h1>
-            <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-              先把登录态、受保护页面和当前用户识别跑通，再逐步接入验证码、密码和完整用户体系。
-            </p>
-          </div>
-
-          <Card className="border-border/70 bg-card/90 shadow-sm backdrop-blur">
-            <CardHeader className="space-y-2">
-              <CardDescription className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                当前状态
-              </CardDescription>
-              <CardTitle className="text-xl">{user ? `已登录：${user.displayName}` : "未登录"}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-muted-foreground">
-                {user ? `用户名：${user.username}` : "进入 Agent 页面前需要先登录。"}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <Button asChild className="h-11">
-            <Link href="/requirements-diagnosis">
-              <SearchCheck className="h-4 w-4" />
-              打开需求诊断 Agent
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild variant="secondary" className="h-11">
-            <Link href="/deep-diagnosis">
-              <MessageSquareText className="h-4 w-4" />
-              打开深度诊断 Agent
-            </Link>
-          </Button>
-          <Button asChild variant="secondary" className="h-11">
-            <Link href="/treasure/hunt">
-              <Sparkles className="h-4 w-4" />
-              打开寻宝游戏 Agent
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="h-11">
-            <Link href="/admin/treasure-hunt">
-              <Sparkles className="h-4 w-4" />
-              打开简易后台
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="h-11">
-            <Link href="/admin/credits">
-              <Coins className="h-4 w-4" />
-              积分后台
-            </Link>
-          </Button>
+    <main className="min-h-screen bg-[#f7f3ec] px-4 py-4 text-[#171511] sm:px-6 lg:px-8">
+      <section className="mx-auto flex min-h-[calc(100vh-32px)] w-full max-w-7xl flex-col rounded-[10px] border border-[#e2dbcf] bg-[#fffdfa]">
+        <header className="flex min-h-20 items-center justify-between border-b border-[#e2dbcf] px-5 py-4 sm:min-h-24 sm:px-7">
+          <Link
+            href="/"
+            className="text-[34px] font-semibold leading-none tracking-normal text-[#171511] sm:text-[42px]"
+          >
+            Splice AI
+          </Link>
           {user ? (
-            <>
-              <Button asChild variant="outline" className="h-11">
-                <Link href="/settings">
-                  <Settings className="h-4 w-4" />
-                  设置
-                </Link>
-              </Button>
+            <div className="flex items-center gap-3">
+              <span className="hidden text-[13px] text-[#6f6658] sm:inline">
+                {user.displayName}
+              </span>
               <form action="/agent-team/api/auth/logout" method="post">
-                <Button variant="outline" className="h-11" type="submit">
-                  <LogOut className="h-4 w-4" />
-                  退出登录
-                </Button>
+                <button
+                  type="submit"
+                  className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-[#d7cec0] bg-[#fbf7f0] px-3 text-[13px] font-medium text-[#171511] transition-colors hover:border-[#b4a998] cursor-pointer"
+                >
+                  退出
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
               </form>
-            </>
+            </div>
           ) : (
-            <Button asChild variant="outline" className="h-11">
-              <Link href="/login?redirect_url=/">登录</Link>
-            </Button>
+            <Link
+              href="/login"
+              className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-[#d7cec0] bg-[#fbf7f0] px-3 text-[13px] font-medium text-[#171511] transition-colors hover:border-[#b4a998]"
+            >
+              登录
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           )}
+        </header>
+
+        <div className="flex-1 px-5 py-9 sm:px-7 sm:py-12 lg:px-10 lg:py-14">
+          <h1 className="text-[24px] font-semibold leading-tight tracking-normal text-[#171511] sm:text-[28px]">
+            请选择你想体验的 Agent
+          </h1>
+
+          <section className="mt-8 divide-y divide-[#e2dbcf] border-y border-[#e2dbcf] sm:mt-9">
+            {agents.map((agent, index) => {
+              const Icon = agent.icon;
+
+              return (
+                <Link
+                  key={agent.href}
+                  href={agent.href}
+                  className="group grid gap-5 py-7 transition-colors hover:bg-[#f4eee5] sm:grid-cols-[64px_minmax(0,1fr)_96px] sm:items-center sm:px-4 lg:py-7"
+                >
+                  <div className="flex items-center gap-4 sm:block">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-[8px] border border-[#d7cec0] bg-[#fbf7f0] text-[#171511]">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="text-[13px] text-[#9a8f7d] sm:mt-3 sm:block">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-[#827767]">
+                      {agent.meta}
+                    </p>
+                    <h2 className="mt-2 text-[26px] font-semibold leading-tight tracking-normal text-[#171511] sm:text-[30px]">
+                      {agent.name}
+                      <span className="ml-2 text-[#9a8f7d]">{agent.suffix}</span>
+                    </h2>
+                    <p className="mt-4 max-w-xl text-[15px] leading-7 text-[#6f6658]">
+                      {agent.description}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center text-[14px] font-medium text-[#171511] sm:justify-end">
+                    打开
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </div>
+                </Link>
+              );
+            })}
+          </section>
         </div>
       </section>
     </main>

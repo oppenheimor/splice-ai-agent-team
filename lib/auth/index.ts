@@ -5,11 +5,6 @@ export {
 } from "./cookies";
 export {
   getCurrentUser,
-  isValidPassword,
-  isValidUsername,
-  loginOrRegisterWithPassword,
-  normalizeUsername,
   requireUser,
-  revokeSession,
 } from "./session";
 export type { AuthUser, LoginSession } from "./session";

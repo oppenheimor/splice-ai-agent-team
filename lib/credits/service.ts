@@ -6,8 +6,9 @@ import {
   CREDIT_LIMITS,
   CREDIT_TASK_COSTS,
 } from "@/constants/credits";
-import { normalizeUsername, type AuthUser } from "@/lib/auth/session";
+import type { AuthUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
+import { normalizeUsername } from "@/lib/users/username";
 
 export class InsufficientCreditsError extends Error {
   constructor(
