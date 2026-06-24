@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgentConversation, AgentManifest } from "@/lib/agent-team/agents/types";
+import { csrfFetch } from "@/lib/security/csrf-client";
 import { cn } from "@/lib/utils";
 import { MobileConversationHistoryButton } from "./DeepDiagnosisMobileNavbar";
 import {
@@ -172,7 +173,7 @@ async function fetchConversationSummaries(agentId: string): Promise<AgentConvers
 }
 
 async function deleteConversation(agentId: string, conversationId: string) {
-  await fetch(
+  await csrfFetch(
     `/agent-team/api/agent-team/conversations/${encodeURIComponent(conversationId)}?agentId=${encodeURIComponent(agentId)}`,
     { method: "DELETE" },
   );
@@ -183,7 +184,7 @@ async function renameConversation(
   conversationId: string,
   title: string,
 ): Promise<AgentConversation | null> {
-  const response = await fetch(
+  const response = await csrfFetch(
     `/agent-team/api/agent-team/conversations/${encodeURIComponent(conversationId)}?agentId=${encodeURIComponent(agentId)}`,
     {
       method: "PATCH",

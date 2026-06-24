@@ -8,8 +8,14 @@ export {
   isValidPassword,
   isValidUsername,
   loginOrRegisterWithPassword,
+  createLoginSessionForUser,
   normalizeUsername,
   requireUser,
   revokeSession,
 } from "./session";
+export {
+  loginOrRegisterWithSmsCode,
+  requestSmsCode,
+} from "./sms-code";
+export { isValidPhone, normalizePhone } from "@/utils/phone";
 export type { AuthUser, LoginSession } from "./session";

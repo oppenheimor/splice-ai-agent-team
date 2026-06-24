@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { ArrowRight, Coins, LogOut, MessageSquareText, SearchCheck, Settings, Sparkles } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
+import { CSRF_FORM_FIELD_NAME } from "@/lib/security/csrf-constants";
+import { getCsrfToken } from "@/lib/security/csrf-server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function Home() {
   const user = await getCurrentUser();
+  const csrfToken = await getCsrfToken();
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-background via-background to-muted/40 px-6 py-10 text-foreground">
@@ -85,6 +88,7 @@ export default async function Home() {
                 </Link>
               </Button>
               <form action="/agent-team/api/auth/logout" method="post">
+                <input type="hidden" name={CSRF_FORM_FIELD_NAME} value={csrfToken} />
                 <Button variant="outline" className="h-11" type="submit">
                   <LogOut className="h-4 w-4" />
                   退出登录

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, Coins, ShieldAlert, UserPlus } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
+import { CSRF_FORM_FIELD_NAME } from "@/lib/security/csrf-constants";
+import { getCsrfToken } from "@/lib/security/csrf-server";
 import {
   getCreditAdminDashboard,
 } from "@/lib/credits/service";
@@ -21,7 +23,8 @@ type CreditAdminPageProps = {
 
 export default async function CreditAdminPage({ searchParams }: CreditAdminPageProps) {
   const params = await searchParams;
-  const user = await requireUser();
+  const user = await requireUser("/admin/credits");
+  const csrfToken = await getCsrfToken();
   let dashboard: Awaited<ReturnType<typeof getCreditAdminDashboard>>;
 
   try {
@@ -84,6 +87,7 @@ export default async function CreditAdminPage({ searchParams }: CreditAdminPageP
             </CardHeader>
             <CardContent>
               <form action="/agent-team/api/admin/credits/grant" method="post" className="grid gap-4">
+                <input type="hidden" name={CSRF_FORM_FIELD_NAME} value={csrfToken} />
                 <div className="grid gap-2">
                   <Label htmlFor="targetUsername">用户名</Label>
                   <Input id="targetUsername" name="targetUsername" placeholder="例如 paul" required />

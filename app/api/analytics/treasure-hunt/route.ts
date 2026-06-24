@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME } from "@/lib/auth/cookies";
 import { getCurrentUser } from "@/lib/auth/session";
 import { recordTreasureAnalyticsEvent } from "@/lib/analytics/treasure-hunt";
+import { csrfErrorResponse, validateCsrfRequest } from "@/lib/security/csrf";
 
 export const runtime = "nodejs";
 
@@ -27,6 +28,10 @@ export async function POST(request: NextRequest) {
     input = (await request.json()) as AnalyticsRequestBody;
   } catch {
     return NextResponse.json({ error: "请求格式不正确。" }, { status: 400 });
+  }
+
+  if (!(await validateCsrfRequest(request, { jsonBody: input }))) {
+    return csrfErrorResponse();
   }
 
   if (!input.type || !["page_view", "click"].includes(input.type) || !input.pagePath) {

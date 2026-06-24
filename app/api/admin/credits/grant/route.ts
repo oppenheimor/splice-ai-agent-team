@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { buildRequestUrl } from "@/lib/http/request-origin";
 import { grantCreditsToUsername } from "@/lib/credits/service";
+import { csrfErrorResponse, validateCsrfRequest } from "@/lib/security/csrf";
 
 export async function POST(request: NextRequest) {
   const adminUser = await getCurrentUser();
@@ -13,6 +14,10 @@ export async function POST(request: NextRequest) {
   }
 
   const formData = await request.formData();
+  if (!(await validateCsrfRequest(request, { formData }))) {
+    return csrfErrorResponse();
+  }
+
   const targetUsername = String(formData.get("targetUsername") || "");
   const credits = Number(String(formData.get("credits") || "").trim());
   const reason = String(formData.get("reason") || "");

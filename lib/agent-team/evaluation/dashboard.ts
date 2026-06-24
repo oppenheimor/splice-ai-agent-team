@@ -116,6 +116,7 @@ export async function getAgentEvalConversationDetail(conversationId: string) {
           messageIndex: true,
           role: true,
           text: true,
+          parts: true,
           createdAt: true,
           metadata: true,
         },

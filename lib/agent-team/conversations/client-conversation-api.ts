@@ -1,4 +1,5 @@
 import type { AgentConversation } from "@/lib/agent-team/agents/types";
+import { csrfFetch } from "@/lib/security/csrf-client";
 
 export async function fetchAgentConversationSummaries(
   agentId: string,
@@ -37,7 +38,7 @@ export async function deleteAgentConversation(
   agentId: string,
   conversationId: string,
 ) {
-  await fetch(
+  await csrfFetch(
     `/agent-team/api/agent-team/conversations/${encodeURIComponent(conversationId)}?agentId=${encodeURIComponent(agentId)}`,
     { method: "DELETE" },
   );
@@ -48,7 +49,7 @@ export async function renameAgentConversation(
   conversationId: string,
   title: string,
 ): Promise<AgentConversation | null> {
-  const response = await fetch(
+  const response = await csrfFetch(
     `/agent-team/api/agent-team/conversations/${encodeURIComponent(conversationId)}?agentId=${encodeURIComponent(agentId)}`,
     {
       method: "PATCH",

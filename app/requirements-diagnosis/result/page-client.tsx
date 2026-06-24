@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { REQUIREMENTS_DIAGNOSIS_RESULT_KEY } from "@/lib/requirements-diagnosis/quiz";
+import { csrfFetch } from "@/lib/security/csrf-client";
 import { mergeNarrative } from "@/lib/requirements-diagnosis/scoring";
 import type { DiagnosisRecordDto } from "@/lib/requirements-diagnosis/persistence";
 import type { DiagnosisNarrative, DiagnosisResult } from "@/lib/requirements-diagnosis/types";
@@ -61,7 +62,7 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
       setNarrativeDraft("");
 
       try {
-        const response = await fetch("/agent-team/api/agent-team/diagnosis/complete", {
+        const response = await csrfFetch("/agent-team/api/agent-team/diagnosis/complete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nextRetryRecordId ? { quizResultId: nextRetryRecordId, retryNarrative: true } : { answers: current.answers }),

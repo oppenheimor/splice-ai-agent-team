@@ -6,6 +6,7 @@ import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } fro
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentConversation, AgentManifest } from "@/lib/agent-team/agents/types";
 import { createId } from "@/lib/agent-team/id";
+import { csrfFetch } from "@/lib/security/csrf-client";
 import {
   createConversation,
   deleteConversation,
@@ -400,7 +401,7 @@ export function useAgentChat(agent: AgentManifest, options: UseAgentChatOptions 
 }
 
 async function fetchWithReadableChatError(input: RequestInfo | URL, init?: RequestInit) {
-  const response = await fetch(input, init);
+  const response = await csrfFetch(input, init);
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response));
@@ -492,7 +493,7 @@ async function fetchDatabaseConversation(agentId: string, conversationId: string
 }
 
 async function createDatabaseConversation(agentId: string, conversationId: string): Promise<AgentConversation> {
-  const response = await fetch("/agent-team/api/agent-team/conversations", {
+  const response = await csrfFetch("/agent-team/api/agent-team/conversations", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -539,7 +540,7 @@ async function updateDatabaseConversationTitle(
   conversationId: string,
   title: string,
 ): Promise<AgentConversation | null> {
-  const response = await fetch(
+  const response = await csrfFetch(
     `/agent-team/api/agent-team/conversations/${encodeURIComponent(conversationId)}?agentId=${encodeURIComponent(agentId)}`,
     {
       method: "PATCH",
@@ -576,7 +577,7 @@ async function updateDatabaseConversationTitle(
 }
 
 async function deleteDatabaseConversation(agentId: string, conversationId: string): Promise<void> {
-  await fetch(
+  await csrfFetch(
     `/agent-team/api/agent-team/conversations/${encodeURIComponent(conversationId)}?agentId=${encodeURIComponent(agentId)}`,
     { method: "DELETE" },
   );

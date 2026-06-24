@@ -4,59 +4,43 @@ import {
   SESSION_MAX_AGE_SECONDS,
   shouldUseSecureAuthCookie,
 } from "@/lib/auth/cookies";
-import { loginOrRegisterWithPassword } from "@/lib/auth/session";
+import { loginOrRegisterWithSmsCode } from "@/lib/auth/sms-code";
 import { getClientIp } from "@/lib/http/client-ip";
 import { buildRequestUrl } from "@/lib/http/request-origin";
 import { setCsrfCookies, getOrCreateCsrfSecret, validateCsrfRequest } from "@/lib/security/csrf";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
+  const phone = String(formData.get("phone") ?? "");
+
   if (!(await validateCsrfRequest(request, { formData }))) {
-    return NextResponse.redirect(buildLoginUrl(request, "csrf_token_invalid", ""), 303);
+    return NextResponse.redirect(buildLoginUrl(request, "csrf_token_invalid", "", phone), 303);
   }
 
-  const username = String(formData.get("username") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const code = String(formData.get("code") ?? "");
   const nextPath = sanitizeNextPath(
     String(formData.get("redirect_url") ?? formData.get("next") ?? ""),
   );
 
-  if (!username || !password) {
-    return NextResponse.redirect(
-      buildLoginUrl(request, "missing_credentials", nextPath),
-      303,
-    );
-  }
-
   let session;
 
   try {
-    session = await loginOrRegisterWithPassword({
-      username,
-      password,
+    session = await loginOrRegisterWithSmsCode({
+      phone,
+      code,
       userAgent: request.headers.get("user-agent"),
       ipAddress: getClientIp(request),
     });
   } catch (error) {
-    if (error instanceof Error && error.message === "INVALID_USERNAME") {
-      return NextResponse.redirect(
-        buildLoginUrl(request, "invalid_username", nextPath),
-        303,
-      );
-    }
+    if (error instanceof Error) {
+      const errorCode = mapSmsLoginError(error.message);
 
-    if (error instanceof Error && error.message === "INVALID_PASSWORD") {
-      return NextResponse.redirect(
-        buildLoginUrl(request, "invalid_password", nextPath),
-        303,
-      );
-    }
-
-    if (error instanceof Error && error.message === "INVALID_CREDENTIALS") {
-      return NextResponse.redirect(
-        buildLoginUrl(request, "invalid_credentials", nextPath),
-        303,
-      );
+      if (errorCode) {
+        return NextResponse.redirect(
+          buildLoginUrl(request, errorCode, nextPath, phone),
+          303,
+        );
+      }
     }
 
     throw error;
@@ -81,11 +65,26 @@ export async function POST(request: NextRequest) {
   return response;
 }
 
-function buildLoginUrl(request: NextRequest, error: string, nextPath: string) {
+function mapSmsLoginError(errorMessage: string): string {
+  const messages: Record<string, string> = {
+    INVALID_PHONE: "invalid_phone",
+    INVALID_CODE: "invalid_code",
+    CODE_EXPIRED: "code_expired",
+    TOO_MANY_CODE_ATTEMPTS: "too_many_code_attempts",
+  };
+
+  return messages[errorMessage] ?? "";
+}
+
+function buildLoginUrl(request: NextRequest, error: string, nextPath: string, phone: string) {
   const url = buildRequestUrl(request, "/agent-team/login");
+  url.searchParams.set("mode", "sms");
   url.searchParams.set("error", error);
   if (nextPath) {
     url.searchParams.set("redirect_url", nextPath);
+  }
+  if (phone) {
+    url.searchParams.set("phone", phone);
   }
   return url;
 }

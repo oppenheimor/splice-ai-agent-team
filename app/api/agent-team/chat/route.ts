@@ -3,6 +3,7 @@ import { consumeStream, convertToModelMessages, streamText, type UIMessage } fro
 import { NextRequest } from "next/server";
 import { AUTH_COOKIE_NAME } from "@/lib/auth/cookies";
 import { getCurrentUser } from "@/lib/auth/session";
+import { csrfErrorResponse, validateCsrfRequest } from "@/lib/security/csrf";
 import { recordTreasureChatMessages } from "@/lib/analytics/treasure-hunt";
 import { pickAguiTools } from "@/lib/agent-team/agui/tools";
 import { getAgentById } from "@/lib/agent-team/agents/registry";
@@ -62,6 +63,10 @@ export async function POST(request: NextRequest) {
     input = (await request.json()) as ChatRequestBody;
   } catch {
     return Response.json({ error: "请求格式不正确。" }, { status: 400 });
+  }
+
+  if (!(await validateCsrfRequest(request, { jsonBody: input }))) {
+    return csrfErrorResponse();
   }
 
   const agent = getAgentById(input.agentId);

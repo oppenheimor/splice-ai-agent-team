@@ -6,6 +6,7 @@ import {
   softDeleteAgentConversation,
   updateAgentConversationTitle,
 } from "@/lib/agent-team/conversations/database-conversations";
+import { csrfErrorResponse, validateCsrfRequest } from "@/lib/security/csrf";
 
 export const runtime = "nodejs";
 
@@ -63,6 +64,10 @@ export async function PATCH(request: NextRequest, context: ConversationRouteCont
     return NextResponse.json({ error: "请求格式不正确。" }, { status: 400 });
   }
 
+  if (!(await validateCsrfRequest(request, { jsonBody: input }))) {
+    return csrfErrorResponse();
+  }
+
   const { conversationId } = await context.params;
 
   try {
@@ -97,6 +102,10 @@ export async function DELETE(request: NextRequest, context: ConversationRouteCon
 
   if (!agent) {
     return NextResponse.json({ error: "未知 Agent。" }, { status: 404 });
+  }
+
+  if (!(await validateCsrfRequest(request))) {
+    return csrfErrorResponse();
   }
 
   const { conversationId } = await context.params;

@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect } from "react";
 import { createId } from "@/lib/agent-team/id";
+import { CSRF_FORM_FIELD_NAME } from "@/lib/security/csrf-constants";
+import { csrfFetch, getBrowserCsrfToken } from "@/lib/security/csrf-client";
 
 type TrackInput = {
   type: "page_view" | "click";
@@ -17,6 +19,7 @@ export function useTreasureAnalytics(conversationId?: string) {
     (input: TrackInput) => {
       const body = JSON.stringify({
         ...input,
+        [CSRF_FORM_FIELD_NAME]: getBrowserCsrfToken(),
         pagePath: window.location.pathname,
         visitorId: getVisitorId(),
         conversationId,
@@ -28,7 +31,7 @@ export function useTreasureAnalytics(conversationId?: string) {
         return;
       }
 
-      void fetch("/agent-team/api/analytics/treasure-hunt", {
+      void csrfFetch("/agent-team/api/analytics/treasure-hunt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body,

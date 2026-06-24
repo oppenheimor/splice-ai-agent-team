@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME } from "@/lib/auth/cookies";
 import { revokeSession } from "@/lib/auth/session";
+import { csrfErrorResponse, validateCsrfRequest } from "@/lib/security/csrf";
 
 export async function POST(request: NextRequest) {
+  const formData = await request.formData();
+  if (!(await validateCsrfRequest(request, { formData }))) {
+    return csrfErrorResponse();
+  }
+
   await revokeSession(request.cookies.get(AUTH_COOKIE_NAME)?.value);
 
   const loginUrl = new URL("/agent-team/login", request.url);

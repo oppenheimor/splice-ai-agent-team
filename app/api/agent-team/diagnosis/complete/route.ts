@@ -1,7 +1,9 @@
 import { deepseek } from "@ai-sdk/deepseek";
 import { streamText } from "ai";
+import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { buildSseHeaders, createSseStream, enqueueSseEvent } from "@/lib/http/sse";
+import { csrfErrorResponse, validateCsrfRequest } from "@/lib/security/csrf";
 import {
   buildNarrativeSystemPrompt,
   createDiagnosis,
@@ -21,7 +23,7 @@ type CompleteRequest = {
   retryNarrative?: boolean;
 };
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -33,6 +35,10 @@ export async function POST(request: Request) {
     input = (await request.json()) as CompleteRequest;
   } catch {
     return Response.json({ error: "请求格式不正确。" }, { status: 400 });
+  }
+
+  if (!(await validateCsrfRequest(request, { jsonBody: input }))) {
+    return csrfErrorResponse();
   }
 
   try {

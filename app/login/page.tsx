@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 import { GeistSans } from "geist/font/sans";
 import { getCurrentUser } from "@/lib/auth/session";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { getCsrfToken } from "@/lib/security/csrf-server";
+import { LoginForm } from "@/components/auth/LoginForm";
 
 type LoginPageProps = {
   searchParams?: Promise<{
     error?: string;
+    mode?: string;
     next?: string;
+    phone?: string;
     redirect_url?: string;
   }>;
 };
@@ -17,12 +18,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const nextPath = sanitizeNextPath(params?.redirect_url ?? params?.next);
   const user = await getCurrentUser();
+  const csrfToken = await getCsrfToken();
 
   if (user) {
     redirect(nextPath || "/treasure/hunt");
   }
 
   const error = params?.error;
+  const initialMode = params?.mode === "password" ? "password" : "sms";
 
   return (
     <main
@@ -41,74 +44,17 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
           <div className="hidden h-48 w-px bg-[#ebebeb] lg:block" />
 
-          <form
-            className="w-[min(348px,calc(100vw-40px))] max-w-full space-y-4 lg:w-full lg:space-y-5"
-            action="/agent-team/api/auth/login"
-            method="post"
-          >
-            <input type="hidden" name="redirect_url" value={nextPath} />
-
-            <div className="flex border-b border-[#eaeaea]">
-              <div className="-mb-px border-b border-[#171717] pb-2.5 text-[14px] font-medium leading-6 text-[#171717]">
-                账号登录
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <Label className="sr-only" htmlFor="username">
-                  用户名
-                </Label>
-                <Input
-                  id="username"
-                  name="username"
-                  autoComplete="username"
-                  placeholder="用户名"
-                  required
-                  className="h-10 rounded-[6px] border-[#d8d8d8] bg-white px-3 text-[13px] text-[#171717] shadow-[0_1px_0_rgba(0,0,0,0.02)] placeholder:text-[#8f8f8f] hover:border-[#bdbdbd] focus-visible:border-[#171717] focus-visible:ring-[#006bff] focus-visible:ring-offset-2 lg:h-11 lg:px-3.5 lg:text-[14px]"
-                />
-              </div>
-
-              <div>
-                <Label className="sr-only" htmlFor="password">
-                  密码
-                </Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="密码"
-                  required
-                  className="h-10 rounded-[6px] border-[#d8d8d8] bg-white px-3 text-[13px] text-[#171717] shadow-[0_1px_0_rgba(0,0,0,0.02)] placeholder:text-[#8f8f8f] hover:border-[#bdbdbd] focus-visible:border-[#171717] focus-visible:ring-[#006bff] focus-visible:ring-offset-2 lg:h-11 lg:px-3.5 lg:text-[14px]"
-                />
-              </div>
-            </div>
-
-            {error ? <p className="text-sm leading-5 text-destructive">{getErrorMessage(error)}</p> : null}
-
-            <Button
-              type="submit"
-              className="h-10 w-full rounded-[6px] bg-[#171717] text-[13px] font-medium text-white shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_1px_2px_rgba(0,0,0,0.12)] hover:bg-black lg:h-11 lg:text-[14px]"
-            >
-              登录/注册
-            </Button>
-          </form>
+          <LoginForm
+            nextPath={nextPath}
+            csrfToken={csrfToken}
+            error={error}
+            initialMode={initialMode}
+            initialPhone={params?.phone}
+          />
         </div>
       </section>
     </main>
   );
-}
-
-function getErrorMessage(error: string): string {
-  const messages: Record<string, string> = {
-    missing_credentials: "请输入用户名和密码。",
-    invalid_username: "用户名需为 3-32 位小写字母、数字、下划线或短横线，并以字母或数字开头。",
-    invalid_password: "密码长度需为 6-128 位。",
-    invalid_credentials: "密码不正确。这个用户名已经注册过了。",
-  };
-
-  return messages[error] ?? "登录失败，请稍后再试。";
 }
 
 function sanitizeNextPath(value?: string): string {

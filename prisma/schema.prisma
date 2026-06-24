@@ -107,6 +107,34 @@ model Session {
   @@map("sessions")
 }
 
+model VerificationCode {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String    @map("code")
+  ipAddress  String?   @map("ip_address")
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([phone, createdAt])
+  @@index([ipAddress, createdAt])
+  @@index([expiresAt])
+  @@map("verification_codes")
+}
+
+model SmsSendLog {
+  id        String   @id @default(cuid())
+  phone     String
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([phone, createdAt])
+  @@index([ipAddress, createdAt])
+  @@map("sms_send_logs")
+}
+
 model TreasureAnalyticsEvent {
   id             String   @id @default(cuid())
   userId         String

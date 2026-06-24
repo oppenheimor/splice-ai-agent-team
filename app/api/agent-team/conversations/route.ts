@@ -5,6 +5,7 @@ import {
   createAgentConversation,
   listAgentConversationSummaries,
 } from "@/lib/agent-team/conversations/database-conversations";
+import { csrfErrorResponse, validateCsrfRequest } from "@/lib/security/csrf";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,10 @@ export async function POST(request: NextRequest) {
     };
   } catch {
     return NextResponse.json({ error: "请求格式不正确。" }, { status: 400 });
+  }
+
+  if (!(await validateCsrfRequest(request, { jsonBody: input }))) {
+    return csrfErrorResponse();
   }
 
   const agent = getAgentById(input.agentId);

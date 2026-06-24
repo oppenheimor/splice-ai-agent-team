@@ -11,6 +11,8 @@ import { MessagePartsRenderer } from "./MessagePartsRenderer";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { CSRF_FORM_FIELD_NAME } from "@/lib/security/csrf-constants";
+import { getBrowserCsrfToken } from "@/lib/security/csrf-client";
 import { CreditBalancePill, CreditErrorNotice, CreditSettingsButton } from "@/components/credits/CreditStatus";
 
 type AgentChatShellProps = {
@@ -68,6 +70,7 @@ export function AgentChatShell({ agent, emptyState }: AgentChatShellProps) {
             <CreditBalancePill credit={credit} compact />
             <CreditSettingsButton />
             <form action="/agent-team/api/auth/logout" method="post">
+              <input type="hidden" name={CSRF_FORM_FIELD_NAME} value={getBrowserCsrfToken()} />
               <Button variant="outline" type="submit">
                 <LogOut className="h-4 w-4" />
                 退出

@@ -2,11 +2,9 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, Clock3, MessageSquareText, TriangleAlert } from "lucide-react";
 import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import rehypeSanitize from "rehype-sanitize";
-import remarkGfm from "remark-gfm";
 import { requireUser } from "@/lib/auth/session";
 import { getAgentEvalConversationDetail } from "@/lib/agent-team/evaluation/dashboard";
+import { AgentEvalMessageParts } from "@/components/admin/AgentEvalMessageParts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -118,26 +116,13 @@ export default async function AgentEvalConversationPage({ params }: { params: Pr
                   </Badge>
                   <span className="font-mono text-xs text-[#7d7d7d]">{formatDate(message.createdAt)}</span>
                 </div>
-                <MarkdownMessage content={message.text || "[非文本消息]"} />
+                <AgentEvalMessageParts text={message.text} parts={message.parts} />
               </article>
             ))}
           </CardContent>
         </Card>
       </section>
     </main>
-  );
-}
-
-const markdownClassName =
-  "mt-3 max-w-none overflow-x-auto break-words text-sm leading-7 text-[#333] [&_a]:font-medium [&_a]:text-[#171717] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[#d4d4d4] [&_blockquote]:pl-3 [&_blockquote]:text-[#666666] [&_code]:rounded [&_code]:bg-white [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.92em] [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-semibold [&_li]:my-1 [&_ol]:ml-5 [&_ol]:list-decimal [&_p]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-[#eaeaea] [&_pre]:bg-white [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_td]:border [&_td]:border-[#e5e5e5] [&_td]:px-2 [&_td]:py-1.5 [&_th]:border [&_th]:border-[#e5e5e5] [&_th]:bg-white [&_th]:px-2 [&_th]:py-1.5 [&_ul]:ml-5 [&_ul]:list-disc";
-
-function MarkdownMessage({ content }: { content: string }) {
-  return (
-    <div className={markdownClassName}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-        {content}
-      </ReactMarkdown>
-    </div>
   );
 }
 

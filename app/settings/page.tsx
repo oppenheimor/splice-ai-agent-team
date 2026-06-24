@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { LogOut, Settings, UserRound, Wallet } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
+import { CSRF_FORM_FIELD_NAME } from "@/lib/security/csrf-constants";
+import { getCsrfToken } from "@/lib/security/csrf-server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsBackButton } from "./SettingsBackButton";
@@ -9,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const user = await requireUser();
+  const csrfToken = await getCsrfToken();
 
   return (
     <main className="min-h-screen bg-[#f6f6f4] px-5 py-6 text-[#171717] md:px-8 md:py-9">
@@ -52,6 +55,7 @@ export default async function SettingsPage() {
               </div>
             </dl>
             <form action="/agent-team/api/auth/logout" method="post">
+              <input type="hidden" name={CSRF_FORM_FIELD_NAME} value={csrfToken} />
               <Button
                 variant="outline"
                 type="submit"
