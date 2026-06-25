@@ -120,7 +120,7 @@ export function DeepDiagnosisLanding({ agent }: DeepDiagnosisLandingProps) {
         />
         <section className="min-w-0 flex-1 overflow-y-auto px-4 sm:px-5 lg:px-6">
           <EmptyConversation>
-            <div className="mt-3">
+            <div className="mt-6">
               <Composer
                 composerRef={composerRef}
                 input={input}

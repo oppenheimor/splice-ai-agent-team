@@ -167,7 +167,7 @@ export function Composer({
     >
       <div className="pointer-events-auto relative mx-auto w-full max-w-[900px]">
         {lifted ? (
-          <DeepDiagnosisInputMascot className="absolute right-3 top-1 z-30 w-24 -translate-y-[48%] drop-shadow-[0_10px_18px_rgba(0,0,0,0.08)] sm:right-8 sm:top-1 sm:w-36 lg:right-10 lg:w-40" />
+          <DeepDiagnosisInputMascot className="absolute right-3 top-[-10px] z-30 w-24 -translate-y-[48%] drop-shadow-[0_10px_18px_rgba(0,0,0,0.08)] sm:right-8 sm:top-[-24px] sm:w-36 lg:right-10 lg:w-40 lg:top-[-28px]" />
         ) : null}
         <div
           data-deep-diagnosis-composer-card
