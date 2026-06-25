@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-const DEEP_DIAGNOSIS_LOGO_SRC = "/agent-team/brand/deep-diagnosis/logo.png";
+const DEEP_DIAGNOSIS_LOGO_SRC = "/agent-team/brand/deep-diagnosis/logo.jpg";
 const DEEP_DIAGNOSIS_INPUT_MASCOT_SRC = "/agent-team/brand/deep-diagnosis/input-mascot.png";
 
 export function DeepDiagnosisLogo({
@@ -12,14 +12,14 @@ export function DeepDiagnosisLogo({
   imageClassName?: string;
 }) {
   return (
-    <span className={cn("grid shrink-0 place-items-center", className)}>
+    <span className={cn("grid shrink-0 place-items-center overflow-hidden rounded-full", className)}>
       <Image
         src={DEEP_DIAGNOSIS_LOGO_SRC}
-        alt=""
+        alt="Deep Diagnosis Logo"
         width={1024}
         height={1024}
         unoptimized
-        className={cn("block h-full w-full object-contain", imageClassName)}
+        className={cn("block h-full w-full object-cover", imageClassName)}
         draggable={false}
       />
     </span>

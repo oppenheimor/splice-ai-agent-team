@@ -6,7 +6,7 @@ import { MessagePartsRenderer } from "@/components/agent-chat/MessagePartsRender
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { useAgentChat } from "@/lib/agent-team/chat/useAgentChat";
-import { DeepDiagnosisInputMascot, DeepDiagnosisLogo } from "./DeepDiagnosisBrand";
+import { DeepDiagnosisLogo } from "./DeepDiagnosisBrand";
 import {
   deepDiagnosisAccentButton,
   deepDiagnosisAgentMark,
@@ -43,7 +43,8 @@ export function EmptyConversation({ children }: { children?: ReactNode }) {
   return (
     <div className="relative mx-auto flex min-h-full w-full max-w-[960px] items-center justify-center px-0 py-5 sm:px-1 sm:py-10">
       <div
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[360px] w-[min(820px,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(220,230,235,0.22)_0%,rgba(245,245,245,0)_68%)] sm:h-[520px]"
+        className="pointer-events-none absolute inset-0 opacity-[0.25]"
+        style={{ backgroundImage: 'radial-gradient(#8f8f8f 1px, transparent 1px)', backgroundSize: '24px 24px' }}
         aria-hidden="true"
       />
       <section className="relative mx-auto grid w-full max-w-[900px] gap-5 sm:gap-8">
@@ -166,9 +167,6 @@ export function Composer({
       }
     >
       <div className="pointer-events-auto relative mx-auto w-full max-w-[900px]">
-        {lifted ? (
-          <DeepDiagnosisInputMascot className="absolute right-3 top-[-10px] z-30 w-24 -translate-y-[48%] drop-shadow-[0_10px_18px_rgba(0,0,0,0.08)] sm:right-8 sm:top-[-24px] sm:w-36 lg:right-10 lg:w-40 lg:top-[-28px]" />
-        ) : null}
         <div
           data-deep-diagnosis-composer-card
           className={`${lifted ? "min-h-[152px] rounded-[20px] px-4 pb-4 pt-5 shadow-[0_1px_1px_rgba(0,0,0,0.02),0_18px_36px_-30px_rgba(0,0,0,0.38)] sm:min-h-[204px] sm:rounded-[24px] sm:px-6 sm:pb-6 sm:pt-6" : "rounded-2xl px-3 py-3 shadow-[0_1px_1px_rgba(0,0,0,0.02),0_4px_8px_-4px_rgba(0,0,0,0.04),0_24px_48px_-28px_rgba(0,0,0,0.36)] sm:px-4 sm:py-4"} relative border border-[#e7e7e7] bg-[#ffffff] focus-within:border-[#c9c9c9] focus-within:shadow-[0_1px_1px_rgba(0,0,0,0.02),0_8px_16px_-8px_rgba(0,0,0,0.08),0_28px_56px_-28px_rgba(0,0,0,0.4)] motion-safe:transition-[border-color,box-shadow] motion-safe:duration-200 motion-reduce:transition-none`}
@@ -235,23 +233,19 @@ export function Composer({
           </form>
         </div>
         {lifted && prompts?.length && onPromptSelect ? (
-          <div className="mt-3 grid grid-cols-1 overflow-hidden rounded-2xl border border-[#e9e9e9] bg-[#f6f6f6]/72 px-1.5 pb-1.5 pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] sm:mt-4 sm:pt-5">
-            <p className={`px-3 pb-2 text-[11px] font-medium leading-none text-[#9a9a9a] sm:px-3.5 ${deepDiagnosisMono}`}>
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:mt-5 sm:gap-3">
+            <p className={`px-1 pb-1 text-[11px] font-medium leading-none text-[#9a9a9a] sm:px-1.5 ${deepDiagnosisMono}`}>
               也可以从这里开始
             </p>
             {prompts.map((prompt, index) => (
-              <div key={prompt.prompt}>
-                <PromptChip
-                  index={index + 1}
-                  title={prompt.title}
-                  description={prompt.description}
-                  prompt={prompt.prompt}
-                  onStart={onPromptSelect}
-                />
-                {index < prompts.length - 1 ? (
-                  <div className="mx-3 h-px bg-[#e5e5e5]/82 sm:mx-4" aria-hidden="true" />
-                ) : null}
-              </div>
+              <PromptChip
+                key={prompt.prompt}
+                index={index + 1}
+                title={prompt.title}
+                description={prompt.description}
+                prompt={prompt.prompt}
+                onStart={onPromptSelect}
+              />
             ))}
           </div>
         ) : null}
@@ -321,9 +315,9 @@ function PromptChip({
       <button
         type="button"
         onClick={() => onStart(prompt)}
-        className={`${deepDiagnosisFocusRing} group grid min-h-[76px] w-full grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-2 rounded-xl bg-transparent px-3 py-2.5 text-left hover:bg-white/72 sm:min-h-[70px] sm:grid-cols-[42px_minmax(0,1fr)_36px] sm:gap-3 sm:px-4 ${deepDiagnosisMicroInteraction} cursor-pointer`}
+        className={`${deepDiagnosisFocusRing} group grid min-h-[76px] w-full grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-2 rounded-xl border border-[#ececec] bg-white px-3 py-2.5 text-left shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all duration-[300ms] ease-[cubic-bezier(0.25,1,0.5,1)] hover:-translate-y-[1px] hover:border-[#e0e0e0] hover:shadow-[0_6px_16px_-4px_rgba(0,0,0,0.08),0_2px_4px_-1px_rgba(0,0,0,0.03)] sm:min-h-[70px] sm:grid-cols-[42px_minmax(0,1fr)_36px] sm:gap-3 sm:px-4 cursor-pointer`}
       >
-        <span className={`grid h-8 w-8 place-items-center rounded-full border border-[#e6e6e6] bg-white/72 text-xs text-[#7a7a7a] group-hover:border-[#d8d8d8] group-hover:bg-white sm:h-10 sm:w-10 ${deepDiagnosisMono}`}>
+        <span className={`grid h-8 w-8 place-items-center rounded-full border border-[#e6e6e6] bg-white/72 text-xs text-[#7a7a7a] transition-all duration-[300ms] ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:border-[#d8d8d8] group-hover:bg-white sm:h-10 sm:w-10 ${deepDiagnosisMono}`}>
           {String(index).padStart(2, "0")}
         </span>
         <span className="grid min-w-0 gap-0.5">
@@ -334,7 +328,7 @@ function PromptChip({
             {description}
           </span>
         </span>
-        <span className="grid h-8 w-8 place-items-center rounded-full border border-[#dcdcdc] bg-white/82 text-[#333333] opacity-[0.9] group-hover:translate-x-0.5 group-hover:border-[#171717] group-hover:bg-[#171717] group-hover:text-white group-hover:opacity-100 sm:h-9 sm:w-9">
+        <span className="grid h-8 w-8 place-items-center rounded-full border border-[#dcdcdc] bg-white/82 text-[#333333] opacity-[0.9] transition-all duration-[300ms] ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:translate-x-0.5 group-hover:border-[#171717] group-hover:bg-[#171717] group-hover:text-white group-hover:opacity-100 sm:h-9 sm:w-9">
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
       </button>

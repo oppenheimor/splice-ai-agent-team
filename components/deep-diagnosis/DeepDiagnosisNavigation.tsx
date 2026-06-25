@@ -5,7 +5,7 @@ import { Coins, PanelLeftClose, PanelLeftOpen, Plus, Settings, Trash2 } from "lu
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import type { AgentConversation } from "@/lib/agent-team/agents/types";
 import type { UseCreditBalanceResult } from "@/lib/credits/useCreditBalance";
-import { getCreditBalanceTextClass, useCreditsHref } from "@/components/credits/CreditStatus";
+import { useCreditsHref } from "@/components/credits/CreditStatus";
 import { cn } from "@/lib/utils";
 import { DeepDiagnosisLogo } from "./DeepDiagnosisBrand";
 import {
@@ -137,7 +137,7 @@ function SidebarAccountActions({ credit }: { credit?: UseCreditBalanceResult }) 
       >
         <Coins className="h-4 w-4 text-[#666666]" aria-hidden="true" />
         <span className="min-w-0 truncate">
-          <span className={typeof balance === "number" ? getCreditBalanceTextClass(balance) : "text-[#666666]"}>
+          <span className={typeof balance === "number" ? "text-[#4d4d4d]" : "text-[#666666]"}>
             {balanceText}
           </span>
           {" 积分"}
