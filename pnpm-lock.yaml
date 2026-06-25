@@ -14,9 +14,6 @@ importers:
       '@ai-sdk/react':
         specifier: ^3.0.184
         version: 3.0.193(react@19.2.4)(zod@4.4.3)
-      '@fontsource/noto-sans-sc':
-        specifier: ^5.2.9
-        version: 5.2.9
       '@prisma/adapter-pg':
         specifier: ^7.8.0
         version: 7.8.0

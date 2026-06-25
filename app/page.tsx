@@ -60,33 +60,33 @@ export default async function Home() {
         <div className="absolute top-[25%] right-[10%] w-[500px] h-[500px] rounded-full bg-[rgba(255,80,120,0.06)] blur-[100px] animate-[float_20s_ease-in-out_infinite_alternate] [animation-delay:-10s] z-0" />
       </div>
 
-      <header className="fixed top-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-[1200px] flex items-center justify-between px-8 py-4 bg-white/60 backdrop-blur-[24px] backdrop-saturate-[1.8] border border-white/80 rounded-full z-[100] shadow-[0_4px_24px_rgba(0,0,0,0.02),inset_0_1px_0_rgba(255,255,255,1)]">
+      <header className="fixed top-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] sm:w-[calc(100%-48px)] max-w-[1200px] flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4 bg-white/60 backdrop-blur-[24px] backdrop-saturate-[1.8] border border-white/80 rounded-full z-[100] shadow-[0_4px_24px_rgba(0,0,0,0.02),inset_0_1px_0_rgba(255,255,255,1)]">
         <Link
           href="/"
-          className="flex items-center gap-[10px] text-[20px] font-extrabold tracking-[-0.5px] text-[#111418]"
+          className="flex shrink-0 items-center gap-2 sm:gap-[10px] text-[18px] sm:text-[20px] font-extrabold tracking-[-0.5px] text-[#111418] whitespace-nowrap"
         >
-          <span className="block w-2 h-2 rounded-full bg-[#111418] shadow-[0_0_12px_2px_rgba(17,20,24,0.4)]" />
+          <span className="block shrink-0 w-2 h-2 rounded-full bg-[linear-gradient(135deg,#00e1ff_0%,#0077ff_100%)] shadow-[0_0_10px_2px_rgba(0,119,255,0.4)]" />
           Splice AI
         </Link>
 
         {user ? (
-          <div className="flex items-center gap-6">
-            <span className="text-[14px] font-medium text-[#6b7280]">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+            <span className="truncate max-w-[100px] sm:max-w-none text-[13px] sm:text-[14px] font-medium text-[#6b7280]">
               {user.displayName}
             </span>
-            <form action="/agent-team/api/auth/logout" method="post">
+            <form action="/agent-team/api/auth/logout" method="post" className="shrink-0">
               <button
                 type="submit"
-                className="flex items-center gap-1.5 bg-white/60 border border-white px-5 py-2 rounded-full text-[13px] font-semibold text-[#6b7280] shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-[600ms] hover:-translate-y-[1px] hover:bg-white hover:text-[#111418] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
+                className="flex items-center gap-1.5 bg-white/60 border border-white px-3 py-1.5 sm:px-5 sm:py-2 rounded-full text-[12px] sm:text-[13px] font-semibold text-[#6b7280] shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-[600ms] hover:-translate-y-[1px] hover:bg-white hover:text-[#111418] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] whitespace-nowrap"
               >
-                退出 <span className="font-sans text-[14px] leading-none mb-[2px]">⎋</span>
+                退出 <span className="hidden sm:inline font-sans text-[14px] leading-none mb-[2px]">⎋</span>
               </button>
             </form>
           </div>
         ) : (
           <Link
             href="/login"
-            className="flex items-center gap-1.5 bg-white/60 border border-white px-5 py-2 rounded-full text-[13px] font-semibold text-[#6b7280] shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-[600ms] hover:-translate-y-[1px] hover:bg-white hover:text-[#111418] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
+            className="flex shrink-0 items-center gap-1.5 bg-white/60 border border-white px-4 py-1.5 sm:px-5 sm:py-2 rounded-full text-[12px] sm:text-[13px] font-semibold text-[#6b7280] shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-[600ms] hover:-translate-y-[1px] hover:bg-white hover:text-[#111418] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] whitespace-nowrap"
           >
             登录
             <ArrowRight className="h-3.5 w-3.5" />

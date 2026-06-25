@@ -26,8 +26,13 @@ export default async function CreditsPage({ searchParams }: CreditsPageProps) {
   const dashboard = await getCreditDashboard(user.id, { page, pageSize });
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#fafafa] px-3 py-4 text-[#171717] sm:px-5 sm:py-6 md:px-8">
-      <section className="mx-auto grid w-full max-w-5xl gap-4 sm:gap-6">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#fafafa] px-3 py-4 text-[#171717] sm:px-5 sm:py-6 md:px-8">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.25]"
+        style={{ backgroundImage: 'radial-gradient(#8f8f8f 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+        aria-hidden="true"
+      />
+      <section className="relative mx-auto grid w-full max-w-5xl gap-4 sm:gap-6">
         <header className="flex flex-col gap-4 border-b border-[#e5e5e5] pb-4 sm:pb-5 md:flex-row md:items-end md:justify-between">
           <div>
             <CreditsBackButton />
@@ -140,7 +145,7 @@ function MetricCard({
           {icon}
           {title}
         </CardDescription>
-        <CardTitle className="break-words text-3xl font-semibold tracking-normal">{value}</CardTitle>
+        <CardTitle className="break-words font-mono text-3xl font-semibold tracking-normal text-[#333333]">{value}</CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
         <p className="text-sm leading-6 text-[#737373]">{description}</p>
@@ -151,7 +156,7 @@ function MetricCard({
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-[#d4d4d4] bg-[#fbfbfb] px-4 py-8 text-center text-sm text-[#737373]">
+    <div className="rounded-lg border border-[#e5e5e5] bg-[#fafafa]/50 px-4 py-10 text-center text-sm text-[#737373] shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]">
       {text}
     </div>
   );
