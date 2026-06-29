@@ -6,13 +6,14 @@ import { REQUIREMENTS_DIAGNOSIS_RESULT_KEY } from "@/lib/requirements-diagnosis/
 import { mergeNarrative } from "@/lib/requirements-diagnosis/scoring";
 import type { DiagnosisRecordDto } from "@/lib/requirements-diagnosis/persistence";
 import type { DiagnosisNarrative, DiagnosisResult } from "@/lib/requirements-diagnosis/types";
+import type { DiagnosisNarrativePatch } from "@/lib/requirements-diagnosis/completion";
 import { DiagnosisResultReport } from "@/components/requirements-diagnosis/DiagnosisResultReport";
 import { Button } from "@/components/ui/button";
 import { diagnosisAppSurface, diagnosisMutedText, diagnosisPanel, diagnosisPrimaryButton, diagnosisShell, diagnosisStage } from "@/components/requirements-diagnosis/styles";
 
 type StreamEvent =
   | { type: "saved"; data: DiagnosisRecordDto }
-  | { type: "delta"; text: string }
+  | { type: "patch"; patch: DiagnosisNarrativePatch }
   | { type: "done"; narrative: DiagnosisNarrative }
   | { type: "error"; message: string };
 
@@ -25,9 +26,61 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
   const [result, setResult] = useState<DiagnosisResult | null>(initialRecord?.result || null);
   const [status, setStatus] = useState<"idle" | "saving" | "streaming" | "done" | "error">(initialRecord ? "done" : "idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [narrativeDraft, setNarrativeDraft] = useState("");
   const completionStartedRef = useRef(false);
   const savedRecordIdRef = useRef(initialRecord?.id);
+  const typingQueueRef = useRef<DiagnosisNarrativePatch[]>([]);
+  const typingActiveRef = useRef(false);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finalNarrativeRef = useRef<DiagnosisNarrative | null>(null);
+  const streamDoneRef = useRef(false);
+
+  const resetNarrativeTyping = useCallback(() => {
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+    typingQueueRef.current = [];
+    typingActiveRef.current = false;
+    finalNarrativeRef.current = null;
+    streamDoneRef.current = false;
+  }, []);
+
+  const runNextNarrativePatch = useCallback(function runNextNarrativePatch(current: DiagnosisResult) {
+    const patch = typingQueueRef.current.shift();
+    if (!patch) {
+      typingActiveRef.current = false;
+      if (finalNarrativeRef.current) {
+        const finalNarrative = finalNarrativeRef.current;
+        finalNarrativeRef.current = null;
+        setResult((existing) => mergeNarrative(existing || current, finalNarrative));
+      }
+      if (streamDoneRef.current) {
+        streamDoneRef.current = false;
+        setStatus("done");
+      }
+      return;
+    }
+
+    typingActiveRef.current = true;
+    let cursor = 0;
+    const step = () => {
+      cursor = Math.min(patch.text.length, cursor + 2);
+      setResult((existing) => applyNarrativePatchToResult(existing || current, { ...patch, text: patch.text.slice(0, cursor) }));
+      if (cursor < patch.text.length) {
+        typingTimerRef.current = setTimeout(step, 18);
+        return;
+      }
+      typingTimerRef.current = setTimeout(() => runNextNarrativePatch(current), 80);
+    };
+    step();
+  }, []);
+
+  const enqueueNarrativePatch = useCallback((patch: DiagnosisNarrativePatch, current: DiagnosisResult) => {
+    typingQueueRef.current.push(patch);
+    if (!typingActiveRef.current) {
+      runNextNarrativePatch(current);
+    }
+  }, [runNextNarrativePatch]);
 
   const handleStreamEvent = useCallback((event: StreamEvent, current: DiagnosisResult) => {
     if (event.type === "saved") {
@@ -37,19 +90,23 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
       return;
     }
     if (event.type === "done") {
-      setResult((existing) => mergeNarrative(existing || current, event.narrative));
-      setNarrativeDraft("");
+      finalNarrativeRef.current = event.narrative;
+      if (!typingActiveRef.current && typingQueueRef.current.length === 0) {
+        const finalNarrative = finalNarrativeRef.current;
+        finalNarrativeRef.current = null;
+        setResult((existing) => mergeNarrative(existing || current, finalNarrative));
+      }
       return;
     }
-    if (event.type === "delta") {
-      setNarrativeDraft((draft) => `${draft}${event.text}`.slice(0, 12000));
+    if (event.type === "patch") {
+      enqueueNarrativePatch(event.patch, current);
       return;
     }
     if (event.type === "error") {
       setErrorMessage(event.message);
       setStatus("error");
     }
-  }, []);
+  }, [enqueueNarrativePatch]);
 
   const completeDiagnosis = useCallback(async (current: DiagnosisResult, retryRecordId?: string, options: { autoRetry?: boolean } = {}) => {
     let nextRetryRecordId = retryRecordId;
@@ -58,7 +115,7 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       setStatus(nextRetryRecordId ? "streaming" : "saving");
       setErrorMessage(null);
-      setNarrativeDraft("");
+      resetNarrativeTyping();
 
       try {
         const response = await fetch("/agent-team/api/agent-team/diagnosis/complete", {
@@ -99,7 +156,9 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
             handleStreamEvent(event, current);
           }
         }
-        if (!hasStreamError) {
+        if (!hasStreamError && (typingActiveRef.current || typingQueueRef.current.length > 0 || finalNarrativeRef.current)) {
+          streamDoneRef.current = true;
+        } else if (!hasStreamError) {
           setStatus("done");
         }
         window.localStorage.removeItem(REQUIREMENTS_DIAGNOSIS_RESULT_KEY);
@@ -113,7 +172,9 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
         setErrorMessage(error instanceof Error ? error.message : "叙事生成失败，结构化报告仍可查看。");
       }
     }
-  }, [handleStreamEvent]);
+  }, [handleStreamEvent, resetNarrativeTyping]);
+
+  useEffect(() => resetNarrativeTyping, [resetNarrativeTyping]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -158,7 +219,6 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
         result={result}
         recordId={record?.id}
         narrativeStatus={status}
-        narrativeDraft={narrativeDraft}
         errorMessage={errorMessage}
         onRetry={record ? () => completeDiagnosis(result, record.id, { autoRetry: false }) : () => completeDiagnosis(result, undefined, { autoRetry: false })}
       />
@@ -173,4 +233,60 @@ function parseStreamEventLine(line: string): StreamEvent | null {
   const payload = trimmed.startsWith("data:") ? trimmed.slice(5).trim() : trimmed;
   if (!payload) return null;
   return JSON.parse(payload) as StreamEvent;
+}
+
+function applyNarrativePatchToResult(
+  result: DiagnosisResult,
+  patch: DiagnosisNarrativePatch,
+): DiagnosisResult {
+  const narrative = result.narrative || createEmptyClientNarrative();
+  if (patch.type === "actionInsight") {
+    const actionInsights = [...narrative.actionInsights];
+    actionInsights[patch.index] = patch.text;
+    return {
+      ...result,
+      narrative: {
+        ...narrative,
+        actionInsights,
+      },
+    };
+  }
+  if (patch.type === "actionPlan") {
+    return {
+      ...result,
+      narrative: {
+        ...narrative,
+        actionPlan: {
+          ...narrative.actionPlan,
+          [patch.key]: patch.text,
+        },
+      },
+    };
+  }
+  return {
+    ...result,
+    narrative: {
+      ...narrative,
+      closing: {
+        ...narrative.closing,
+        [patch.key]: patch.text,
+      },
+    },
+  };
+}
+
+function createEmptyClientNarrative(): DiagnosisNarrative {
+  return {
+    actionInsights: ["", "", "", "", ""],
+    actionPlan: {
+      week: "",
+      month: "",
+      ongoing: "",
+    },
+    closing: {
+      technology: "",
+      philosophy: "",
+      quote: "",
+    },
+  };
 }

@@ -27,7 +27,6 @@ type DiagnosisResultReportProps = {
   result: DiagnosisResult;
   recordId?: string | null;
   narrativeStatus?: "idle" | "saving" | "streaming" | "done" | "error";
-  narrativeDraft?: string;
   errorMessage?: string | null;
   onRetry?: () => void;
 };
@@ -38,7 +37,7 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
   const [isBottomActionNear, setIsBottomActionNear] = useState(false);
   const [consultationQrOpen, setConsultationQrOpen] = useState(false);
   const dimensions = useMemo(() => Object.values(result.dimensionScores), [result.dimensionScores]);
-  const isNarrativePending = !result.narrative && (narrativeStatus === "saving" || narrativeStatus === "streaming" || narrativeStatus === "idle");
+  const isNarrativePending = narrativeStatus === "saving" || narrativeStatus === "streaming" || narrativeStatus === "idle";
   const decisiveDimensions = useMemo(
     () => dimensions
       .filter((score) => score.diff >= 20)
@@ -163,17 +162,18 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
                     ["本周", result.narrative.actionPlan.week],
                     ["本月", result.narrative.actionPlan.month],
                     ["持续", result.narrative.actionPlan.ongoing],
-                  ]} />
+                  ]} isPending={isNarrativePending} />
                   <ClosingNotes
                     items={[
                       ["AI技术逻辑", result.narrative.closing.technology],
                       ["做事哲学", result.narrative.closing.philosophy],
                       ["一句话", cleanRepeatedClosingQuote(result.narrative.closing.quote, result.operatorTypeName)],
                     ]}
+                    isPending={isNarrativePending}
                   />
                 </>
               ) : (
-                <NarrativeSkeleton isPending={isNarrativePending} />
+                <NarrativePlaceholderBlock isPending={isNarrativePending} />
               )}
               <div className="pt-3">
                 <RecommendationPath
@@ -246,41 +246,24 @@ function DimensionEvidenceItem({
       {insight ? (
         <p className="text-sm leading-6 text-[#3f403c]">{insight}</p>
       ) : (
-        <NarrativeLineSkeleton isPending={isPending} />
+        <NarrativePlaceholder isPending={isPending} />
       )}
     </div>
   );
 }
 
-function NarrativeLineSkeleton({ isPending }: { isPending: boolean }) {
+function NarrativePlaceholder({ isPending }: { isPending: boolean }) {
   if (!isPending) {
     return <p className="text-sm leading-6 text-[#8a8a86]">叙事解读暂未生成，请重试。</p>;
   }
-  return (
-    <div className="grid gap-2 py-1" aria-hidden="true">
-      <span className="h-3 w-full max-w-[680px] animate-pulse rounded-full bg-[#e4e4df]" />
-      <span className="h-3 w-2/3 animate-pulse rounded-full bg-[#e4e4df]" />
-    </div>
-  );
+  return null;
 }
 
-function NarrativeSkeleton({ isPending }: { isPending: boolean }) {
+function NarrativePlaceholderBlock({ isPending }: { isPending: boolean }) {
   if (!isPending) {
     return <p className="text-sm leading-6 text-[#8a8a86]">落地建议暂未生成，请重试。</p>;
   }
-  return (
-    <div className="grid gap-4" aria-hidden="true">
-      {["本周", "本月", "持续"].map((label) => (
-        <div key={label} className="grid grid-cols-[64px_minmax(0,1fr)] gap-4">
-          <span className="pt-0.5 text-sm font-bold text-[#8a8a86]">{label}</span>
-          <div className="grid gap-2 py-1">
-            <span className="h-3 w-full animate-pulse rounded-full bg-[#e4e4df]" />
-            <span className="h-3 w-4/5 animate-pulse rounded-full bg-[#e4e4df]" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return null;
 }
 
 function DimensionMeter({ score }: { score: DiagnosisResult["dimensionScores"][keyof DiagnosisResult["dimensionScores"]] }) {
@@ -360,26 +343,36 @@ function RecommendationLead({ value }: { value: string }) {
   );
 }
 
-function ActionPlan({ items }: { items: Array<[string, string]> }) {
+function ActionPlan({ items, isPending }: { items: Array<[string, string]>; isPending: boolean }) {
+  const visibleItems = items.filter(([, value]) => value || !isPending);
   return (
     <div className="grid gap-4">
-      {items.map(([label, value]) => (
+      {visibleItems.map(([label, value]) => (
         <div key={label} className="grid grid-cols-[64px_minmax(0,1fr)] gap-4">
           <span className="pt-0.5 text-sm font-bold text-[#8a8a86]">{label}</span>
-          <p className="text-[15px] font-medium leading-7 text-[#2f302d]">{value}</p>
+          {value ? (
+            <p className="text-[15px] font-medium leading-7 text-[#2f302d]">{value}</p>
+          ) : (
+            <NarrativePlaceholder isPending={isPending} />
+          )}
         </div>
       ))}
     </div>
   );
 }
 
-function ClosingNotes({ items }: { items: Array<[string, string]> }) {
+function ClosingNotes({ items, isPending }: { items: Array<[string, string]>; isPending: boolean }) {
+  const visibleItems = items.filter(([, value]) => value || !isPending);
   return (
     <div className="grid gap-3 pt-1">
-      {items.map(([label, value]) => (
+      {visibleItems.map(([label, value]) => (
         <div key={label} className="grid gap-2 sm:grid-cols-[88px_minmax(0,1fr)]">
           <strong className="text-xs font-bold leading-6 tracking-[0.06em] text-[#a0a19b]">{label}</strong>
-          <p className="text-sm font-normal leading-6 text-[#4f504c]">{value}</p>
+          {value ? (
+            <p className="text-sm font-normal leading-6 text-[#4f504c]">{value}</p>
+          ) : (
+            <NarrativePlaceholder isPending={isPending} />
+          )}
         </div>
       ))}
     </div>
