@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DiagnosisRadarChart from "@/components/requirements-diagnosis/DiagnosisRadarChart";
 import DiagnosisAiAdoptionProfile from "@/components/requirements-diagnosis/DiagnosisAiAdoptionProfile";
+import { ConsultationQrDialog } from "@/components/requirements-diagnosis/ConsultationQrDialog";
 import {
   diagnosisAppSurface,
   diagnosisBadge,
@@ -35,6 +36,7 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
   const bottomActionsRef = useRef<HTMLDivElement | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isBottomActionNear, setIsBottomActionNear] = useState(false);
+  const [consultationQrOpen, setConsultationQrOpen] = useState(false);
   const dimensions = useMemo(() => Object.values(result.dimensionScores), [result.dimensionScores]);
   const decisiveDimensions = useMemo(
     () => dimensions
@@ -170,6 +172,7 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
                   title={result.recommendation.title}
                   description={result.recommendation.description}
                   hook={result.recommendation.hook}
+                  onConsultationOpen={() => setConsultationQrOpen(true)}
                 />
               </div>
             </Section>
@@ -201,6 +204,11 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
               </Link>
             </div>
           ) : null}
+          <ConsultationQrDialog
+            open={consultationQrOpen}
+            remark={result.recommendation.hook}
+            onClose={() => setConsultationQrOpen(false)}
+          />
         </div>
       </article>
     </div>
@@ -329,15 +337,32 @@ function ClosingNotes({ items }: { items: Array<[string, string]> }) {
   );
 }
 
-function RecommendationPath({ title, description, hook }: { title: string; description: string; hook: string }) {
+function RecommendationPath({
+  title,
+  description,
+  hook,
+  onConsultationOpen,
+}: {
+  title: string;
+  description: string;
+  hook: string;
+  onConsultationOpen: () => void;
+}) {
   return (
     <div>
       <strong className="block text-[13px] font-bold tracking-[0.06em] text-[#a0a19b]">可选后续路径</strong>
       <strong className="mt-2 block text-lg font-black text-[#222322]">{title}</strong>
       <p className="mt-2 text-sm font-normal leading-6 text-[#4f504c]">{description}</p>
-      <p className="mt-2 text-sm font-bold text-[#3f403c]">
-        下一步：{hook}
-      </p>
+      <button
+        type="button"
+        onClick={onConsultationOpen}
+        className="group mt-3 inline-flex max-w-full items-center gap-2 border-b border-[#d8d8d3] pb-0.5 text-left text-sm font-bold leading-6 text-[#3f403c] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2e2f2d] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffffc]"
+      >
+        <span className="min-w-0">
+          下一步：{hook}
+        </span>
+        <ArrowRight className="h-4 w-4 shrink-0 text-[#686965] transition group-hover:translate-x-0.5" aria-hidden="true" />
+      </button>
     </div>
   );
 }
