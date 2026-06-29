@@ -3,11 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, RefreshCcw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getOperatorAvatar } from "@/lib/requirements-diagnosis/operator-avatars";
 import type { DiagnosisResult } from "@/lib/requirements-diagnosis/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import DiagnosisRadarChart from "@/components/requirements-diagnosis/DiagnosisRadarChart";
+import DiagnosisAiAdoptionProfile from "@/components/requirements-diagnosis/DiagnosisAiAdoptionProfile";
+import { ConsultationQrDialog } from "@/components/requirements-diagnosis/ConsultationQrDialog";
 import {
   diagnosisAppSurface,
   diagnosisBadge,
@@ -29,16 +32,20 @@ type DiagnosisResultReportProps = {
   onRetry?: () => void;
 };
 
-export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idle", narrativeDraft, errorMessage, onRetry }: DiagnosisResultReportProps) {
-  const showDraft = narrativeStatus === "streaming" && Boolean(narrativeDraft?.trim());
+export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idle", errorMessage, onRetry }: DiagnosisResultReportProps) {
   const bottomActionsRef = useRef<HTMLDivElement | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isBottomActionNear, setIsBottomActionNear] = useState(false);
-  const dimensions = Object.values(result.dimensionScores);
-  const decisiveDimensions = dimensions
-    .filter((score) => score.diff >= 20)
-    .sort((a, b) => b.diff - a.diff)
-    .slice(0, 3);
+  const [consultationQrOpen, setConsultationQrOpen] = useState(false);
+  const dimensions = useMemo(() => Object.values(result.dimensionScores), [result.dimensionScores]);
+  const isNarrativePending = !result.narrative && (narrativeStatus === "saving" || narrativeStatus === "streaming" || narrativeStatus === "idle");
+  const decisiveDimensions = useMemo(
+    () => dimensions
+      .filter((score) => score.diff >= 20)
+      .sort((a, b) => b.diff - a.diff)
+      .slice(0, 3),
+    [dimensions],
+  );
   const operatorAvatar = getOperatorAvatar(result.operatorTypeName);
   const showFloatingAction = Boolean(recordId) && scrollProgress >= 0.3 && scrollProgress < 0.8 && !isBottomActionNear;
   const deepDiagnosisHref = "/deep-diagnosis";
@@ -105,26 +112,34 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
 
           <div className="mt-7 grid gap-8">
             <Section index="01" title="判断依据" status={narrativeStatus} errorMessage={errorMessage} onRetry={onRetry}>
-              {showDraft ? <NarrativeDraft content={narrativeDraft || ""} /> : null}
               <div className="grid gap-7">
                 <div>
                   <SubsectionLabel>经营判断依据</SubsectionLabel>
-                  <div className="mt-4 grid gap-5">
+                  <div className="mt-4">
+                    <DiagnosisRadarChart scores={dimensions} />
+                  </div>
+                  <div className="mt-5 grid gap-5">
                     {dimensions.map((score, index) => (
                       <DimensionEvidenceItem
                         key={score.code}
                         score={score}
-                        insight={result.narrative.actionInsights[index]}
+                        insight={result.narrative?.actionInsights[index]}
+                        isPending={isNarrativePending}
                       />
                     ))}
                   </div>
                 </div>
                 <div>
-                  <SubsectionLabel>AI 使用基础</SubsectionLabel>
-                  <div className="mt-4 grid gap-3">
-                    <InfoRow label="当前阶段" value={`${result.aiAdoptionStageLabel}（${result.aiAdoptionStage}）`} />
-                    <InfoRow label="关注偏好" value={result.userTypeLabel} />
-                    <InfoRow label="认知宽度" value={result.cognitiveWidth} />
+                  <SubsectionLabel>AI 落地画像</SubsectionLabel>
+                  <div className="mt-4">
+                    <DiagnosisAiAdoptionProfile
+                      aiReadiness={result.aiReadiness}
+                      aiConcern={result.aiConcern}
+                      aiLandingPreference={result.aiLandingPreference}
+                      aiBlocker={result.aiBlocker}
+                      landingPriority={result.landingPriority}
+                      cognitiveWidth={result.cognitiveWidth}
+                    />
                   </div>
                   {result.blindSpots.length ? (
                     <div className="mt-5">
@@ -141,25 +156,31 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
             </Section>
 
             <Section index="02" title="落地建议" status={narrativeStatus} errorMessage={errorMessage} onRetry={onRetry}>
-              {showDraft ? <NarrativeDraft content={narrativeDraft || ""} compact /> : null}
               <RecommendationLead value={result.justNeedLabel} />
-              <ActionPlan items={[
-                ["本周", result.narrative.actionPlan.week],
-                ["本月", result.narrative.actionPlan.month],
-                ["持续", result.narrative.actionPlan.ongoing],
-              ]} />
-              <ClosingNotes
-                items={[
-                  ["AI技术逻辑", result.narrative.closing.technology],
-                  ["做事哲学", result.narrative.closing.philosophy],
-                  ["一句话", cleanRepeatedClosingQuote(result.narrative.closing.quote, result.operatorTypeName)],
-                ]}
-              />
+              {result.narrative ? (
+                <>
+                  <ActionPlan items={[
+                    ["本周", result.narrative.actionPlan.week],
+                    ["本月", result.narrative.actionPlan.month],
+                    ["持续", result.narrative.actionPlan.ongoing],
+                  ]} />
+                  <ClosingNotes
+                    items={[
+                      ["AI技术逻辑", result.narrative.closing.technology],
+                      ["做事哲学", result.narrative.closing.philosophy],
+                      ["一句话", cleanRepeatedClosingQuote(result.narrative.closing.quote, result.operatorTypeName)],
+                    ]}
+                  />
+                </>
+              ) : (
+                <NarrativeSkeleton isPending={isNarrativePending} />
+              )}
               <div className="pt-3">
                 <RecommendationPath
                   title={result.recommendation.title}
                   description={result.recommendation.description}
                   hook={result.recommendation.hook}
+                  onConsultationOpen={() => setConsultationQrOpen(true)}
                 />
               </div>
             </Section>
@@ -191,6 +212,11 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
               </Link>
             </div>
           ) : null}
+          <ConsultationQrDialog
+            open={consultationQrOpen}
+            remark={result.recommendation.hook}
+            onClose={() => setConsultationQrOpen(false)}
+          />
         </div>
       </article>
     </div>
@@ -205,13 +231,54 @@ function SubsectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function DimensionEvidenceItem({ score, insight }: { score: DiagnosisResult["dimensionScores"][keyof DiagnosisResult["dimensionScores"]]; insight?: string }) {
+function DimensionEvidenceItem({
+  score,
+  insight,
+  isPending,
+}: {
+  score: DiagnosisResult["dimensionScores"][keyof DiagnosisResult["dimensionScores"]];
+  insight?: string;
+  isPending: boolean;
+}) {
   return (
     <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
       <DimensionMeter score={score} />
-      <p className="text-sm leading-6 text-[#3f403c]">
-        {insight || `当前主导倾向是${score.dominantLabel}，${getStarMeaning(score.stars)}`}
-      </p>
+      {insight ? (
+        <p className="text-sm leading-6 text-[#3f403c]">{insight}</p>
+      ) : (
+        <NarrativeLineSkeleton isPending={isPending} />
+      )}
+    </div>
+  );
+}
+
+function NarrativeLineSkeleton({ isPending }: { isPending: boolean }) {
+  if (!isPending) {
+    return <p className="text-sm leading-6 text-[#8a8a86]">叙事解读暂未生成，请重试。</p>;
+  }
+  return (
+    <div className="grid gap-2 py-1" aria-hidden="true">
+      <span className="h-3 w-full max-w-[680px] animate-pulse rounded-full bg-[#e4e4df]" />
+      <span className="h-3 w-2/3 animate-pulse rounded-full bg-[#e4e4df]" />
+    </div>
+  );
+}
+
+function NarrativeSkeleton({ isPending }: { isPending: boolean }) {
+  if (!isPending) {
+    return <p className="text-sm leading-6 text-[#8a8a86]">落地建议暂未生成，请重试。</p>;
+  }
+  return (
+    <div className="grid gap-4" aria-hidden="true">
+      {["本周", "本月", "持续"].map((label) => (
+        <div key={label} className="grid grid-cols-[64px_minmax(0,1fr)] gap-4">
+          <span className="pt-0.5 text-sm font-bold text-[#8a8a86]">{label}</span>
+          <div className="grid gap-2 py-1">
+            <span className="h-3 w-full animate-pulse rounded-full bg-[#e4e4df]" />
+            <span className="h-3 w-4/5 animate-pulse rounded-full bg-[#e4e4df]" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -284,15 +351,6 @@ function Section({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-4 text-sm">
-      <span className="font-semibold text-[#8a8a86]">{label}</span>
-      <strong className="font-semibold text-[#222322]">{value}</strong>
-    </div>
-  );
-}
-
 function RecommendationLead({ value }: { value: string }) {
   return (
     <div className="grid gap-1">
@@ -328,38 +386,34 @@ function ClosingNotes({ items }: { items: Array<[string, string]> }) {
   );
 }
 
-function RecommendationPath({ title, description, hook }: { title: string; description: string; hook: string }) {
+function RecommendationPath({
+  title,
+  description,
+  hook,
+  onConsultationOpen,
+}: {
+  title: string;
+  description: string;
+  hook: string;
+  onConsultationOpen: () => void;
+}) {
   return (
     <div>
       <strong className="block text-[13px] font-bold tracking-[0.06em] text-[#a0a19b]">可选后续路径</strong>
       <strong className="mt-2 block text-lg font-black text-[#222322]">{title}</strong>
       <p className="mt-2 text-sm font-normal leading-6 text-[#4f504c]">{description}</p>
-      <p className="mt-2 text-sm font-bold text-[#3f403c]">
-        下一步：{hook}
-      </p>
+      <button
+        type="button"
+        onClick={onConsultationOpen}
+        className="group mt-3 inline-flex max-w-full items-center gap-2 border-b border-[#d8d8d3] pb-0.5 text-left text-sm font-bold leading-6 text-[#3f403c] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2e2f2d] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffffc]"
+      >
+        <span className="min-w-0">
+          下一步：{hook}
+        </span>
+        <ArrowRight className="h-4 w-4 shrink-0 text-[#686965] transition group-hover:translate-x-0.5" aria-hidden="true" />
+      </button>
     </div>
   );
-}
-
-function NarrativeDraft({ content, compact = false }: { content: string; compact?: boolean }) {
-  const receivedLength = cleanNarrativeDraft(content).length;
-  return (
-    <div className="bg-[#f7f7f3] px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
-        <strong className={`text-sm font-semibold ${diagnosisMutedText}`}>个性化叙事正在生成</strong>
-        <span className="text-xs text-[#2e2f2d]">流式接收中</span>
-      </div>
-      <p className={compact ? `mt-3 max-h-28 overflow-hidden text-xs leading-5 ${diagnosisMutedText}` : `mt-3 max-h-40 overflow-auto text-xs leading-5 ${diagnosisMutedText}`}>
-        已接收 {receivedLength} 字叙事内容，正在整理成可行动的报告段落。结构化报告已可阅读，生成完成后会自动替换当前段落。
-      </p>
-    </div>
-  );
-}
-
-function getStarMeaning(stars: 1 | 2 | 3): string {
-  if (stars === 1) return "极端倾向，优势锋利，另一侧也可能是关键短板。";
-  if (stars === 2) return "有明显倾向，同时保留一定弹性空间。";
-  return "接近平衡，切换自如，但需要确认真正优势。";
 }
 
 function formatConclusionLines(
@@ -389,15 +443,6 @@ function getDimensionTone(code: string): { accent: string } {
     B: { accent: "#7b5d73" },
   };
   return tones[code] || { accent: "#2e2f2d" };
-}
-
-function cleanNarrativeDraft(content: string): string {
-  return content
-    .replace(/[{}[\]",]/g, " ")
-    .replace(/actionInsights|actionPlan|closing|week|month|ongoing|technology|philosophy|quote/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(-360);
 }
 
 function cleanRepeatedClosingQuote(quote: string, operatorTypeName: string): string {

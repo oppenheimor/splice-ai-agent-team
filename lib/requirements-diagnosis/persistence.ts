@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { calculateDiagnosis, mergeNarrative } from "./scoring";
 import type { DiagnosisNarrative, DiagnosisResult, QuizAnswerValue, QuizAnswers, QuizOptionValue } from "./types";
 
@@ -48,7 +48,9 @@ export function toDiagnosisJson(result: DiagnosisResult) {
     blindSpots: result.blindSpots as Prisma.InputJsonValue,
     justNeed: result.justNeed,
     crowdType: result.crowdType,
-    enhancedNarrative: result.narrative as unknown as Prisma.InputJsonValue,
+    enhancedNarrative: result.narrative
+      ? result.narrative as unknown as Prisma.InputJsonValue
+      : Prisma.DbNull,
   };
 }
 
@@ -88,6 +90,33 @@ function repairStoredAnswers(answers: QuizAnswers): QuizAnswers {
   if (!repaired.q13 && isSingleAnswer(repaired.q4)) {
     repaired.q13 = repaired.q4;
   }
+
+  // v2 新增题目（q14–q24）：旧记录缺失时一律补 C（中间选项），避免因新题库导致旧报告 MISSING_Qxx。
+  // 同维度旧题可用时优先继承，确保经营画像维度均分不被 C 拉平。
+  if (!repaired.q14 && isSingleAnswer(repaired.q1)) repaired.q14 = repaired.q1;
+  else if (!repaired.q14) repaired.q14 = "C";
+
+  if (!repaired.q15 && isSingleAnswer(repaired.q3)) repaired.q15 = repaired.q3;
+  else if (!repaired.q15) repaired.q15 = "C";
+
+  if (!repaired.q16) repaired.q16 = isSingleAnswer(repaired.q3) ? repaired.q3 : "C";
+
+  if (!repaired.q17 && isSingleAnswer(repaired.q4)) repaired.q17 = repaired.q4;
+  else if (!repaired.q17) repaired.q17 = "C";
+
+  if (!repaired.q18 && isSingleAnswer(repaired.q5)) repaired.q18 = repaired.q5;
+  else if (!repaired.q18) repaired.q18 = "C";
+
+  if (!repaired.q19) repaired.q19 = isSingleAnswer(repaired.q5) ? repaired.q5 : "C";
+
+  if (!repaired.q20 && isSingleAnswer(repaired.q6)) repaired.q20 = repaired.q6;
+  else if (!repaired.q20) repaired.q20 = "C";
+
+  // AI 落地画像新题：旧记录没有任何 AI 态度信息时补中间值
+  if (!repaired.q21) repaired.q21 = "C";
+  if (!repaired.q22) repaired.q22 = "B";
+  if (!repaired.q23) repaired.q23 = "C";
+  if (!repaired.q24) repaired.q24 = "A";
 
   return repaired;
 }

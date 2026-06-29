@@ -27,55 +27,67 @@ const EXPECTED_OPERATOR_TYPES = [
 const BASE_ANSWERS = {
   q1: "C",
   q2: "C",
+  q14: "C",
   q3: "C",
+  q15: "C",
+  q16: "C",
   q4: "C",
   q13: "C",
+  q17: "C",
   q5: "C",
+  q18: "C",
+  q19: "C",
   q6: "C",
   q7: "C",
+  q20: "C",
+  q21: "C",
   q8: "B",
   q9: "B",
   q10: ["A"],
+  q22: "B",
   q11: ["A", "C", "D"],
   q12: "C",
+  q23: "C",
+  q24: "A",
 } satisfies Required<QuizAnswers>;
 
 const GOLDEN_CASES = [
   { name: "经营画像：稳健深耕", answers: { ...BASE_ANSWERS, q1: "A", q2: "A" }, expected: { operatorTypeName: "稳健深耕型" } },
-  { name: "经营画像：增长探索", answers: { ...BASE_ANSWERS, q1: "B", q2: "B" }, expected: { operatorTypeName: "增长探索型" } },
+  { name: "经营画像：增长探索", answers: { ...BASE_ANSWERS, q1: "E", q2: "E" }, expected: { operatorTypeName: "增长探索型" } },
   { name: "经营画像：经验判断", answers: { ...BASE_ANSWERS, q3: "A" }, expected: { operatorTypeName: "经验判断型" } },
-  { name: "经营画像：数据验证", answers: { ...BASE_ANSWERS, q3: "B" }, expected: { operatorTypeName: "数据验证型" } },
+  { name: "经营画像：数据验证", answers: { ...BASE_ANSWERS, q3: "E" }, expected: { operatorTypeName: "数据验证型" } },
   { name: "经营画像：系统重构", answers: { ...BASE_ANSWERS, q4: "A", q13: "A" }, expected: { operatorTypeName: "系统重构型" } },
-  { name: "经营画像：快速试水", answers: { ...BASE_ANSWERS, q4: "B", q13: "B" }, expected: { operatorTypeName: "快速试水型" } },
+  { name: "经营画像：快速试水", answers: { ...BASE_ANSWERS, q4: "E", q13: "E" }, expected: { operatorTypeName: "快速试水型" } },
   { name: "经营画像：成本优先", answers: { ...BASE_ANSWERS, q5: "A" }, expected: { operatorTypeName: "成本优先型" } },
-  { name: "经营画像：长期投入", answers: { ...BASE_ANSWERS, q5: "B" }, expected: { operatorTypeName: "长期投入型" } },
+  { name: "经营画像：长期投入", answers: { ...BASE_ANSWERS, q5: "E" }, expected: { operatorTypeName: "长期投入型" } },
   { name: "经营画像：风险防守", answers: { ...BASE_ANSWERS, q6: "A", q7: "A" }, expected: { operatorTypeName: "风险防守型" } },
-  { name: "经营画像：创新进攻", answers: { ...BASE_ANSWERS, q6: "B", q7: "B" }, expected: { operatorTypeName: "创新进攻型" } },
+  { name: "经营画像：创新进攻", answers: { ...BASE_ANSWERS, q6: "E", q7: "E" }, expected: { operatorTypeName: "创新进攻型" } },
   { name: "经营画像：平衡统筹", answers: BASE_ANSWERS, expected: { operatorTypeName: "平衡统筹型" } },
   { name: "AI 阶段：无常态化工具优先判 L1", answers: { ...BASE_ANSWERS, q9: "D", q10: ["E"] }, expected: { aiAdoptionStage: "L1" } },
-  { name: "AI 阶段：全域刚需", answers: { ...BASE_ANSWERS, q8: "B", q9: "D", q10: ["A", "B", "C", "D"] }, expected: { aiAdoptionStage: "L5" } },
+  { name: "AI 阶段：全域刚需", answers: { ...BASE_ANSWERS, q8: "B", q9: "D", q10: ["A", "B", "C", "D"], q22: "E" }, expected: { aiAdoptionStage: "L5" } },
   {
     name: "真实样本：高频使用代码与 Agent 工具",
     answers: {
       ...BASE_ANSWERS,
-      q1: "B",
+      q1: "D",
       q2: "C",
-      q3: "B",
+      q3: "D",
       q4: "C",
-      q13: "B",
+      q13: "D",
       q5: "C",
-      q6: "B",
+      q6: "D",
       q7: "A",
       q8: "B",
       q9: "D",
       q10: ["D", "C", "A"],
       q11: ["A", "B", "C", "D", "F", "E"],
       q12: "C",
+      q22: "E",
     },
-    expected: { operatorTypeName: "数据验证型", aiAdoptionStage: "L5", justNeedLabel: "复杂系统工作" },
+    expected: { operatorTypeName: "数据验证型", aiAdoptionStage: "L5", justNeedLabel: "客户转化与服务" },
   },
-  { name: "刚需方向：重复机械工作", answers: { ...BASE_ANSWERS, q12: "A" }, expected: { justNeedLabel: "重复性机械工作" } },
-  { name: "刚需方向：创意产出工作", answers: { ...BASE_ANSWERS, q12: "B" }, expected: { justNeedLabel: "创意产出工作" } },
+  { name: "刚需方向：重复执行工作", answers: { ...BASE_ANSWERS, q12: "A" }, expected: { justNeedLabel: "重复性执行工作" } },
+  { name: "刚需方向：内容与创意产出", answers: { ...BASE_ANSWERS, q12: "B" }, expected: { justNeedLabel: "内容与创意产出" } },
 ] satisfies Array<{
   name: string;
   answers: Required<QuizAnswers>;
@@ -356,7 +368,9 @@ function judgeSample(name: string, answers: Required<QuizAnswers>, result: Diagn
   if (answers.q9 === "A" && !(answers.q10 as QuizOptionValue[]).includes("E")) {
     warnings.push("几乎不用 AI 但选择了常态化工具，存在轻微自我认知冲突。");
   }
-  if (result.narrative.actionPlan.week.length < 12) {
+  if (!result.narrative) {
+    warnings.push("叙事尚未生成，离线评估只检查结构化评分。");
+  } else if (result.narrative.actionPlan.week.length < 12) {
     warnings.push("本周动作过短，可能不像咨询建议。");
   }
 
@@ -496,7 +510,7 @@ function formatSample(sample: ReturnType<typeof judgeSample>): string {
     `- 答案：${formatAnswers(sample.answers)}`,
     `- 结果：${sample.result.operatorTypeName} / ${sample.result.aiAdoptionStage} · ${sample.result.aiAdoptionStageLabel} / ${sample.result.justNeedLabel}`,
     `- 解释：${sample.result.operatorTypeDefinition}`,
-    `- 本周动作：${sample.result.narrative.actionPlan.week}`,
+    `- 本周动作：${sample.result.narrative?.actionPlan.week || "叙事尚未生成"}`,
     issueLines.length ? `- 问题：${issueLines.join("；")}` : "- 问题：未发现明显不合理点",
   ].join("\n");
 }
