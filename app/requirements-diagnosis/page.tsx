@@ -26,11 +26,11 @@ export default async function RequirementsDiagnosisPage() {
             <section className={`mt-6 ${diagnosisHero}`}>
               <p className={diagnosisHeroEyebrow}>AI 需求诊断</p>
               <h1 className={diagnosisHeroTitle}>
-                <span className="block">你的 AI 转型，</span>
+                <span className="block">你的 AI 转型</span>
                 <span className="block">从照见自己开始</span>
               </h1>
               <p className={`mt-2 text-sm leading-7 ${diagnosisMutedText}`}>
-                13 道题，找到你的 AI 转型切入点。
+                24 道题，找到你的 AI 转型切入点。
               </p>
             </section>
 

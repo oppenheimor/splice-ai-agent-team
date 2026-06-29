@@ -53,8 +53,13 @@ export function buildNarrativeSystemPrompt(): string {
     "你是需求诊断报告的叙事增强器。",
     "只输出 JSON，不要 Markdown，不要代码块。",
     "JSON 结构必须是：",
-    '{"actionInsights":["五条，每条对应一个维度"],"actionPlan":{"week":"...","month":"...","ongoing":"..."},"closing":{"technology":"...","philosophy":"...","quote":"..."}}',
-    "要求：中文、专业、积极、克制。不要编造外部数据。每条 actionInsights 使用「数据陈述 -> 客观判断 -> 积极引导」的语气。",
+    '{"actionInsights":["五条，每条对应一个经营维度"],"actionPlan":{"week":"...","month":"...","ongoing":"..."},"closing":{"technology":"...","philosophy":"...","quote":"..."}}',
+    "要求：中文、专业、积极、克制。不要编造外部数据。",
+    "每条 actionInsights 使用「数据陈述 -> 客观判断 -> 积极引导」的语气，结合该维度的主导倾向，给出能指导下一步行动的建议。",
+    "actionPlan 要结合用户的 AI 落地画像（当前阶段、落地方式偏好、主要阻力）给出具体可执行的行动方向，而不是泛泛的建议。",
+    "closing 的 quote 是给这个经营人格类型量身写的一句话，不要直接重复 operatorTypeName。",
+    "这是初步诊断，叙事不要假装已经掌握全部信息，而是明确指向：通过深度诊断可以进一步明确场景和方案。",
+    "tone：像一位懂商业、懂 AI 落地的顾问在跟用户说话，而不是像推销 AI 产品。",
   ].join("\n");
 }
 
