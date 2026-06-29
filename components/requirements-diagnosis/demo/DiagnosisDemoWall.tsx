@@ -234,7 +234,7 @@ function ResultScreen({ style }: { style: DiagnosisDemoStyle }) {
       </div>
       <div className={`mt-5 p-4 ${style.metric}`}>
         <strong className="block text-sm">本周动作</strong>
-        <p className={`mt-2 text-sm leading-6 ${style.muted}`}>{demoResult.narrative.actionPlan.week}</p>
+        <p className={`mt-2 text-sm leading-6 ${style.muted}`}>{demoResult.narrative?.actionPlan.week || "叙事尚未生成"}</p>
       </div>
       <div className="mt-auto">
         <Link href={`${style.basePath}/chat/demo-record-1`} className={`flex h-14 items-center justify-center gap-2 text-sm font-bold ${style.primaryButton}`}>

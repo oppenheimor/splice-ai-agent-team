@@ -42,11 +42,10 @@ export async function POST(request: Request) {
 
     const dto = toDiagnosisDto(record);
     if (!process.env.DEEPSEEK_API_KEY) {
-      // 叙事增强不能阻塞报告交付；缺少模型密钥时仍返回已保存记录和本地兜底叙事。
+      // 叙事由模型生成；缺少模型密钥时只返回结构化分数，并显式进入错误态。
       return createSseStream([
         { type: "saved", data: dto },
-        { type: "error", message: "服务端缺少 DEEPSEEK_API_KEY，已返回本地叙事。" },
-        { type: "done", narrative: dto.result.narrative },
+        { type: "error", message: "服务端缺少 DEEPSEEK_API_KEY，暂时无法生成叙事解读。" },
       ]);
     }
 
@@ -70,7 +69,7 @@ export async function POST(request: Request) {
             enqueueSseEvent(controller, { type: "delta", text: delta });
           }
 
-          const narrative = parseNarrative(text, dto.result.narrative);
+          const narrative = parseNarrative(text);
           if (narrative) {
             await saveEnhancedNarrative({
               userId: user.id,
@@ -79,7 +78,7 @@ export async function POST(request: Request) {
             });
             enqueueSseEvent(controller, { type: "done", narrative });
           } else {
-            enqueueSseEvent(controller, { type: "done", narrative: dto.result.narrative });
+            enqueueSseEvent(controller, { type: "error", message: "模型叙事格式不完整，请重试生成。" });
           }
         } catch (error) {
           enqueueSseEvent(controller, {

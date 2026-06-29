@@ -204,7 +204,7 @@ export function calculateDiagnosis(input: QuizAnswers): DiagnosisResult {
     justNeedLabel,
     crowdType,
     recommendation,
-    narrative: buildFallbackNarrative(Object.values(dimensionScores), operatorType.name, justNeedLabel, aiReadiness, landingPriority),
+    narrative: null,
   };
 }
 
@@ -212,16 +212,23 @@ export function mergeNarrative(
   base: DiagnosisResult,
   narrative: Partial<DiagnosisNarrative> | null | undefined,
 ): DiagnosisResult {
-  if (!narrative) return base;
+  if (!narrative) return { ...base, narrative: null };
   return {
     ...base,
     narrative: {
-      ...base.narrative,
-      actionInsights: narrative.actionInsights?.length ? narrative.actionInsights : base.narrative.actionInsights,
-      actionPlan: { ...base.narrative.actionPlan, ...narrative.actionPlan },
-      closing: { ...base.narrative.closing, ...narrative.closing },
-      ...(narrative.dimensionInsights ? { dimensionInsights: { ...base.narrative.dimensionInsights, ...narrative.dimensionInsights } } : {}),
-      ...(narrative.readinessInsights ? { readinessInsights: { ...base.narrative.readinessInsights, ...narrative.readinessInsights } } : {}),
+      actionInsights: narrative.actionInsights || [],
+      actionPlan: {
+        week: narrative.actionPlan?.week || "",
+        month: narrative.actionPlan?.month || "",
+        ongoing: narrative.actionPlan?.ongoing || "",
+      },
+      closing: {
+        technology: narrative.closing?.technology || "",
+        philosophy: narrative.closing?.philosophy || "",
+        quote: narrative.closing?.quote || "",
+      },
+      ...(narrative.dimensionInsights ? { dimensionInsights: narrative.dimensionInsights } : {}),
+      ...(narrative.readinessInsights ? { readinessInsights: narrative.readinessInsights } : {}),
     },
   };
 }
@@ -527,34 +534,6 @@ function buildRecommendation(userType: "TE" | "EP" | "AP", stage: string): Diagn
   } as const;
   const [title, description, hook] = table[userType][tier];
   return { title, description, hook };
-}
-
-function buildFallbackNarrative(
-  scores: DimensionScore[],
-  operatorTypeName: string,
-  justNeedLabel: string,
-  aiReadiness: AiReadinessProfile,
-  landingPriority: LandingPriority,
-): DiagnosisNarrative {
-  return {
-    actionInsights: scores.map((s) => {
-      const lead = s.left >= s.right ? `${s.left}% ${s.leftLabel}` : `${s.right}% ${s.rightLabel}`;
-      const opposite = s.left >= s.right ? s.rightLabel : s.leftLabel;
-      return `${s.label}呈现 ${lead} 倾向。下一步可以刻意补上「${opposite}」视角，让决策更稳。`;
-    }),
-    actionPlan: {
-      week: landingPriority.firstStep,
-      month: `把跑通的流程沉淀成模板，记录节省的时间、成本或新增产出。`,
-      ongoing: `围绕「${operatorTypeName}」的优势，把工具使用升级为可复用的业务方法。`,
-    },
-    closing: {
-      technology: "AI 不只是替你加速，它会放大你原本的判断结构。",
-      philosophy: aiReadiness.level === "L1" || aiReadiness.level === "L2"
-        ? "先从一个你每天都会碰到的场景试起，别等准备好了才行动。"
-        : "先看见自己的默认路径，再决定什么时候顺着走、什么时候换一条路。",
-      quote: `送给${operatorTypeName}一句话：你不止一种可能，但此刻的选择已经给了你第一张地图。`,
-    },
-  };
 }
 
 // ─── 内部工具函数 ─────────────────────────────────────────────────

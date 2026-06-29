@@ -368,7 +368,9 @@ function judgeSample(name: string, answers: Required<QuizAnswers>, result: Diagn
   if (answers.q9 === "A" && !(answers.q10 as QuizOptionValue[]).includes("E")) {
     warnings.push("几乎不用 AI 但选择了常态化工具，存在轻微自我认知冲突。");
   }
-  if (result.narrative.actionPlan.week.length < 12) {
+  if (!result.narrative) {
+    warnings.push("叙事尚未生成，离线评估只检查结构化评分。");
+  } else if (result.narrative.actionPlan.week.length < 12) {
     warnings.push("本周动作过短，可能不像咨询建议。");
   }
 
@@ -508,7 +510,7 @@ function formatSample(sample: ReturnType<typeof judgeSample>): string {
     `- 答案：${formatAnswers(sample.answers)}`,
     `- 结果：${sample.result.operatorTypeName} / ${sample.result.aiAdoptionStage} · ${sample.result.aiAdoptionStageLabel} / ${sample.result.justNeedLabel}`,
     `- 解释：${sample.result.operatorTypeDefinition}`,
-    `- 本周动作：${sample.result.narrative.actionPlan.week}`,
+    `- 本周动作：${sample.result.narrative?.actionPlan.week || "叙事尚未生成"}`,
     issueLines.length ? `- 问题：${issueLines.join("；")}` : "- 问题：未发现明显不合理点",
   ].join("\n");
 }

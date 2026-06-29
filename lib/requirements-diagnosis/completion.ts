@@ -63,22 +63,12 @@ export function buildNarrativeSystemPrompt(): string {
   ].join("\n");
 }
 
-export function parseNarrative(text: string, fallback: DiagnosisNarrative): DiagnosisNarrative | null {
+export function parseNarrative(text: string): DiagnosisNarrative | null {
   const trimmed = text.trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
   try {
     const parsed = JSON.parse(trimmed) as Partial<DiagnosisNarrative>;
-    // LLM 只增强叙事字段；缺字段时保留算法生成的本地报告，避免展示空段落。
-    return {
-      actionInsights: parsed.actionInsights?.length ? parsed.actionInsights : fallback.actionInsights,
-      actionPlan: {
-        ...fallback.actionPlan,
-        ...parsed.actionPlan,
-      },
-      closing: {
-        ...fallback.closing,
-        ...parsed.closing,
-      },
-    };
+    if (!isCompleteNarrative(parsed)) return null;
+    return parsed;
   } catch {
     return null;
   }
@@ -98,4 +88,22 @@ function buildDiagnosisRecordInclude() {
       },
     },
   } satisfies Prisma.DiagnosisQuizResultInclude;
+}
+
+function isCompleteNarrative(narrative: Partial<DiagnosisNarrative>): narrative is DiagnosisNarrative {
+  return (
+    Array.isArray(narrative.actionInsights)
+    && narrative.actionInsights.length === 5
+    && narrative.actionInsights.every(isNonEmptyString)
+    && isNonEmptyString(narrative.actionPlan?.week)
+    && isNonEmptyString(narrative.actionPlan?.month)
+    && isNonEmptyString(narrative.actionPlan?.ongoing)
+    && isNonEmptyString(narrative.closing?.technology)
+    && isNonEmptyString(narrative.closing?.philosophy)
+    && isNonEmptyString(narrative.closing?.quote)
+  );
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }

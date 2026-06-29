@@ -38,6 +38,7 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
   const [isBottomActionNear, setIsBottomActionNear] = useState(false);
   const [consultationQrOpen, setConsultationQrOpen] = useState(false);
   const dimensions = useMemo(() => Object.values(result.dimensionScores), [result.dimensionScores]);
+  const isNarrativePending = !result.narrative && (narrativeStatus === "saving" || narrativeStatus === "streaming" || narrativeStatus === "idle");
   const decisiveDimensions = useMemo(
     () => dimensions
       .filter((score) => score.diff >= 20)
@@ -122,7 +123,8 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
                       <DimensionEvidenceItem
                         key={score.code}
                         score={score}
-                        insight={result.narrative.actionInsights[index]}
+                        insight={result.narrative?.actionInsights[index]}
+                        isPending={isNarrativePending}
                       />
                     ))}
                   </div>
@@ -155,18 +157,24 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
 
             <Section index="02" title="落地建议" status={narrativeStatus} errorMessage={errorMessage} onRetry={onRetry}>
               <RecommendationLead value={result.justNeedLabel} />
-              <ActionPlan items={[
-                ["本周", result.narrative.actionPlan.week],
-                ["本月", result.narrative.actionPlan.month],
-                ["持续", result.narrative.actionPlan.ongoing],
-              ]} />
-              <ClosingNotes
-                items={[
-                  ["AI技术逻辑", result.narrative.closing.technology],
-                  ["做事哲学", result.narrative.closing.philosophy],
-                  ["一句话", cleanRepeatedClosingQuote(result.narrative.closing.quote, result.operatorTypeName)],
-                ]}
-              />
+              {result.narrative ? (
+                <>
+                  <ActionPlan items={[
+                    ["本周", result.narrative.actionPlan.week],
+                    ["本月", result.narrative.actionPlan.month],
+                    ["持续", result.narrative.actionPlan.ongoing],
+                  ]} />
+                  <ClosingNotes
+                    items={[
+                      ["AI技术逻辑", result.narrative.closing.technology],
+                      ["做事哲学", result.narrative.closing.philosophy],
+                      ["一句话", cleanRepeatedClosingQuote(result.narrative.closing.quote, result.operatorTypeName)],
+                    ]}
+                  />
+                </>
+              ) : (
+                <NarrativeSkeleton isPending={isNarrativePending} />
+              )}
               <div className="pt-3">
                 <RecommendationPath
                   title={result.recommendation.title}
@@ -223,13 +231,54 @@ function SubsectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function DimensionEvidenceItem({ score, insight }: { score: DiagnosisResult["dimensionScores"][keyof DiagnosisResult["dimensionScores"]]; insight?: string }) {
+function DimensionEvidenceItem({
+  score,
+  insight,
+  isPending,
+}: {
+  score: DiagnosisResult["dimensionScores"][keyof DiagnosisResult["dimensionScores"]];
+  insight?: string;
+  isPending: boolean;
+}) {
   return (
     <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
       <DimensionMeter score={score} />
-      <p className="text-sm leading-6 text-[#3f403c]">
-        {insight || `当前主导倾向是${score.dominantLabel}，${getStarMeaning(score.stars)}`}
-      </p>
+      {insight ? (
+        <p className="text-sm leading-6 text-[#3f403c]">{insight}</p>
+      ) : (
+        <NarrativeLineSkeleton isPending={isPending} />
+      )}
+    </div>
+  );
+}
+
+function NarrativeLineSkeleton({ isPending }: { isPending: boolean }) {
+  if (!isPending) {
+    return <p className="text-sm leading-6 text-[#8a8a86]">叙事解读暂未生成，请重试。</p>;
+  }
+  return (
+    <div className="grid gap-2 py-1" aria-hidden="true">
+      <span className="h-3 w-full max-w-[680px] animate-pulse rounded-full bg-[#e4e4df]" />
+      <span className="h-3 w-2/3 animate-pulse rounded-full bg-[#e4e4df]" />
+    </div>
+  );
+}
+
+function NarrativeSkeleton({ isPending }: { isPending: boolean }) {
+  if (!isPending) {
+    return <p className="text-sm leading-6 text-[#8a8a86]">落地建议暂未生成，请重试。</p>;
+  }
+  return (
+    <div className="grid gap-4" aria-hidden="true">
+      {["本周", "本月", "持续"].map((label) => (
+        <div key={label} className="grid grid-cols-[64px_minmax(0,1fr)] gap-4">
+          <span className="pt-0.5 text-sm font-bold text-[#8a8a86]">{label}</span>
+          <div className="grid gap-2 py-1">
+            <span className="h-3 w-full animate-pulse rounded-full bg-[#e4e4df]" />
+            <span className="h-3 w-4/5 animate-pulse rounded-full bg-[#e4e4df]" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -365,13 +414,6 @@ function RecommendationPath({
       </button>
     </div>
   );
-}
-
-function getStarMeaning(stars: number): string {
-  if (stars === 1) return "极端倾向，优势锋利，另一侧也可能是关键短板。";
-  if (stars === 2) return "有明显倾向，同时保留一定弹性空间。";
-  if (stars === 3) return "接近平衡，切换自如，但需要确认真正优势。";
-  return "高度平衡，暂无明显主导方向，可先选一个方向聚焦。";
 }
 
 function formatConclusionLines(
