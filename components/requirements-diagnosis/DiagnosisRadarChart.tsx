@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -26,12 +27,15 @@ function toDominantStrength(score: DimensionScore): number {
   return Math.max(score.left, score.right);
 }
 
-export default function DiagnosisRadarChart({ scores }: Props) {
-  const data: ChartEntry[] = scores.map((s) => ({
-    name: s.label,
-    value: toDominantStrength(s),
-    fullMark: 100,
-  }));
+function DiagnosisRadarChart({ scores }: Props) {
+  const data: ChartEntry[] = useMemo(
+    () => scores.map((s) => ({
+      name: s.label,
+      value: toDominantStrength(s),
+      fullMark: 100,
+    })),
+    [scores],
+  );
 
   return (
     <div className="w-full h-64">
@@ -60,3 +64,19 @@ export default function DiagnosisRadarChart({ scores }: Props) {
     </div>
   );
 }
+
+function areScoresEqual(previous: Props, next: Props): boolean {
+  if (previous.scores.length !== next.scores.length) return false;
+
+  return previous.scores.every((score, index) => {
+    const nextScore = next.scores[index];
+    return Boolean(nextScore)
+      && score.code === nextScore.code
+      && score.label === nextScore.label
+      && score.left === nextScore.left
+      && score.right === nextScore.right
+      && score.diff === nextScore.diff;
+  });
+}
+
+export default memo(DiagnosisRadarChart, areScoresEqual);

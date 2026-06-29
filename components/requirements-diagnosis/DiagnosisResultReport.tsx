@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, RefreshCcw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getOperatorAvatar } from "@/lib/requirements-diagnosis/operator-avatars";
 import type { DiagnosisResult } from "@/lib/requirements-diagnosis/types";
 import { Button } from "@/components/ui/button";
@@ -31,16 +31,18 @@ type DiagnosisResultReportProps = {
   onRetry?: () => void;
 };
 
-export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idle", narrativeDraft, errorMessage, onRetry }: DiagnosisResultReportProps) {
-  const showDraft = narrativeStatus === "streaming" && Boolean(narrativeDraft?.trim());
+export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idle", errorMessage, onRetry }: DiagnosisResultReportProps) {
   const bottomActionsRef = useRef<HTMLDivElement | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isBottomActionNear, setIsBottomActionNear] = useState(false);
-  const dimensions = Object.values(result.dimensionScores);
-  const decisiveDimensions = dimensions
-    .filter((score) => score.diff >= 20)
-    .sort((a, b) => b.diff - a.diff)
-    .slice(0, 3);
+  const dimensions = useMemo(() => Object.values(result.dimensionScores), [result.dimensionScores]);
+  const decisiveDimensions = useMemo(
+    () => dimensions
+      .filter((score) => score.diff >= 20)
+      .sort((a, b) => b.diff - a.diff)
+      .slice(0, 3),
+    [dimensions],
+  );
   const operatorAvatar = getOperatorAvatar(result.operatorTypeName);
   const showFloatingAction = Boolean(recordId) && scrollProgress >= 0.3 && scrollProgress < 0.8 && !isBottomActionNear;
   const deepDiagnosisHref = "/deep-diagnosis";
@@ -107,7 +109,6 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
 
           <div className="mt-7 grid gap-8">
             <Section index="01" title="判断依据" status={narrativeStatus} errorMessage={errorMessage} onRetry={onRetry}>
-              {showDraft ? <NarrativeDraft content={narrativeDraft || ""} /> : null}
               <div className="grid gap-7">
                 <div>
                   <SubsectionLabel>经营判断依据</SubsectionLabel>
@@ -151,7 +152,6 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
             </Section>
 
             <Section index="02" title="落地建议" status={narrativeStatus} errorMessage={errorMessage} onRetry={onRetry}>
-              {showDraft ? <NarrativeDraft content={narrativeDraft || ""} compact /> : null}
               <RecommendationLead value={result.justNeedLabel} />
               <ActionPlan items={[
                 ["本周", result.narrative.actionPlan.week],
@@ -342,21 +342,6 @@ function RecommendationPath({ title, description, hook }: { title: string; descr
   );
 }
 
-function NarrativeDraft({ content, compact = false }: { content: string; compact?: boolean }) {
-  const receivedLength = cleanNarrativeDraft(content).length;
-  return (
-    <div className="bg-[#f7f7f3] px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
-        <strong className={`text-sm font-semibold ${diagnosisMutedText}`}>个性化叙事正在生成</strong>
-        <span className="text-xs text-[#2e2f2d]">流式接收中</span>
-      </div>
-      <p className={compact ? `mt-3 max-h-28 overflow-hidden text-xs leading-5 ${diagnosisMutedText}` : `mt-3 max-h-40 overflow-auto text-xs leading-5 ${diagnosisMutedText}`}>
-        已接收 {receivedLength} 字叙事内容，正在整理成可行动的报告段落。结构化报告已可阅读，生成完成后会自动替换当前段落。
-      </p>
-    </div>
-  );
-}
-
 function getStarMeaning(stars: number): string {
   if (stars === 1) return "极端倾向，优势锋利，另一侧也可能是关键短板。";
   if (stars === 2) return "有明显倾向，同时保留一定弹性空间。";
@@ -391,15 +376,6 @@ function getDimensionTone(code: string): { accent: string } {
     B: { accent: "#7b5d73" },
   };
   return tones[code] || { accent: "#2e2f2d" };
-}
-
-function cleanNarrativeDraft(content: string): string {
-  return content
-    .replace(/[{}[\]",]/g, " ")
-    .replace(/actionInsights|actionPlan|closing|week|month|ongoing|technology|philosophy|quote/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(-360);
 }
 
 function cleanRepeatedClosingQuote(quote: string, operatorTypeName: string): string {
