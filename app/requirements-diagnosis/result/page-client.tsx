@@ -142,7 +142,7 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
         <div className={diagnosisStage}>
           <section className={`${diagnosisAppSurface} justify-center text-center`}>
             <h1 className="text-3xl font-black">还没有可展示的评测结果</h1>
-            <p className={`mt-3 text-sm leading-7 ${diagnosisMutedText}`}>请先完成 13 道题，系统会生成你的需求诊断报告。</p>
+            <p className={`mt-3 text-sm leading-7 ${diagnosisMutedText}`}>请先完成 24 道题，系统会生成你的需求诊断报告。</p>
             <Button asChild className={`mt-6 h-14 ${diagnosisPrimaryButton}`}>
               <Link href="/requirements-diagnosis/quiz">开始评测</Link>
             </Button>

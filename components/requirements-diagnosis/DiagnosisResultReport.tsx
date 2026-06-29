@@ -8,6 +8,8 @@ import { getOperatorAvatar } from "@/lib/requirements-diagnosis/operator-avatars
 import type { DiagnosisResult } from "@/lib/requirements-diagnosis/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import DiagnosisRadarChart from "@/components/requirements-diagnosis/DiagnosisRadarChart";
+import DiagnosisAiAdoptionProfile from "@/components/requirements-diagnosis/DiagnosisAiAdoptionProfile";
 import {
   diagnosisAppSurface,
   diagnosisBadge,
@@ -108,7 +110,10 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
               <div className="grid gap-7">
                 <div>
                   <SubsectionLabel>经营判断依据</SubsectionLabel>
-                  <div className="mt-4 grid gap-5">
+                  <div className="mt-4">
+                    <DiagnosisRadarChart scores={dimensions} />
+                  </div>
+                  <div className="mt-5 grid gap-5">
                     {dimensions.map((score, index) => (
                       <DimensionEvidenceItem
                         key={score.code}
@@ -119,11 +124,16 @@ export function DiagnosisResultReport({ result, recordId, narrativeStatus = "idl
                   </div>
                 </div>
                 <div>
-                  <SubsectionLabel>AI 使用基础</SubsectionLabel>
-                  <div className="mt-4 grid gap-3">
-                    <InfoRow label="当前阶段" value={`${result.aiAdoptionStageLabel}（${result.aiAdoptionStage}）`} />
-                    <InfoRow label="关注偏好" value={result.userTypeLabel} />
-                    <InfoRow label="认知宽度" value={result.cognitiveWidth} />
+                  <SubsectionLabel>AI 落地画像</SubsectionLabel>
+                  <div className="mt-4">
+                    <DiagnosisAiAdoptionProfile
+                      aiReadiness={result.aiReadiness}
+                      aiConcern={result.aiConcern}
+                      aiLandingPreference={result.aiLandingPreference}
+                      aiBlocker={result.aiBlocker}
+                      landingPriority={result.landingPriority}
+                      cognitiveWidth={result.cognitiveWidth}
+                    />
                   </div>
                   {result.blindSpots.length ? (
                     <div className="mt-5">
@@ -283,15 +293,6 @@ function Section({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-4 text-sm">
-      <span className="font-semibold text-[#8a8a86]">{label}</span>
-      <strong className="font-semibold text-[#222322]">{value}</strong>
-    </div>
-  );
-}
-
 function RecommendationLead({ value }: { value: string }) {
   return (
     <div className="grid gap-1">
@@ -355,10 +356,11 @@ function NarrativeDraft({ content, compact = false }: { content: string; compact
   );
 }
 
-function getStarMeaning(stars: 1 | 2 | 3): string {
+function getStarMeaning(stars: number): string {
   if (stars === 1) return "极端倾向，优势锋利，另一侧也可能是关键短板。";
   if (stars === 2) return "有明显倾向，同时保留一定弹性空间。";
-  return "接近平衡，切换自如，但需要确认真正优势。";
+  if (stars === 3) return "接近平衡，切换自如，但需要确认真正优势。";
+  return "高度平衡，暂无明显主导方向，可先选一个方向聚焦。";
 }
 
 function formatConclusionLines(
