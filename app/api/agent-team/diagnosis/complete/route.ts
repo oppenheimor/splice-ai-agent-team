@@ -4,8 +4,12 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { buildSseHeaders, createSseStream, enqueueSseEvent } from "@/lib/http/sse";
 import {
   buildNarrativeSystemPrompt,
+  applyNarrativePatch,
+  createEmptyNarrative,
   createDiagnosis,
+  isCompleteNarrative,
   parseNarrative,
+  parseNarrativePatch,
   retryDiagnosisNarrative,
   saveEnhancedNarrative,
   toDiagnosisDto,
@@ -61,22 +65,40 @@ export async function POST(request: Request) {
       async start(controller) {
         // 先把 DB 保存成功事件发给前端，确保用户能进入深度诊断，不被后续 LLM 叙事拖住。
         enqueueSseEvent(controller, { type: "saved", data: dto });
-        let text = "";
+        let rawText = "";
+        let lineBuffer = "";
+        let narrative = createEmptyNarrative();
 
         try {
           for await (const delta of result.textStream) {
-            text += delta;
-            enqueueSseEvent(controller, { type: "delta", text: delta });
+            rawText += delta;
+            lineBuffer += delta;
+            const lines = lineBuffer.split("\n");
+            lineBuffer = lines.pop() || "";
+
+            for (const line of lines) {
+              const patch = parseNarrativePatch(line);
+              if (!patch) continue;
+              narrative = applyNarrativePatch(narrative, patch);
+              enqueueSseEvent(controller, { type: "patch", patch });
+            }
           }
 
-          const narrative = parseNarrative(text);
-          if (narrative) {
+          const trailingPatch = parseNarrativePatch(lineBuffer);
+          if (trailingPatch) {
+            narrative = applyNarrativePatch(narrative, trailingPatch);
+            enqueueSseEvent(controller, { type: "patch", patch: trailingPatch });
+          }
+
+          const legacyJsonNarrative = parseNarrative(rawText);
+          const completeNarrative = isCompleteNarrative(narrative) ? narrative : legacyJsonNarrative;
+          if (completeNarrative) {
             await saveEnhancedNarrative({
               userId: user.id,
               recordId: record.id,
-              narrative,
+              narrative: completeNarrative,
             });
-            enqueueSseEvent(controller, { type: "done", narrative });
+            enqueueSseEvent(controller, { type: "done", narrative: completeNarrative });
           } else {
             enqueueSseEvent(controller, { type: "error", message: "模型叙事格式不完整，请重试生成。" });
           }
