@@ -33,6 +33,8 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalNarrativeRef = useRef<DiagnosisNarrative | null>(null);
   const streamDoneRef = useRef(false);
+  const diagnosisTimingStartedAtRef = useRef<number | null>(null);
+  const firstNarrativeRenderLoggedRef = useRef(false);
 
   const resetNarrativeTyping = useCallback(() => {
     if (typingTimerRef.current) {
@@ -113,16 +115,33 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
     const maxAttempts = options.autoRetry === false ? 1 : 2;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      // TODO: 调试完成后删除，用于定位诊断报告从提交到首个叙事片段的前端耗时。
+      const timingStartedAt = performance.now();
+      diagnosisTimingStartedAtRef.current = timingStartedAt;
+      firstNarrativeRenderLoggedRef.current = false;
+      let previousTimingAt = timingStartedAt;
+      const logTiming = (stage: string) => {
+        const now = performance.now();
+        console.log("[diagnosis.client]", stage, {
+          attempt,
+          elapsedMs: Math.round(now - timingStartedAt),
+          deltaMs: Math.round(now - previousTimingAt),
+        });
+        previousTimingAt = now;
+      };
+
       setStatus(nextRetryRecordId ? "streaming" : "saving");
       setErrorMessage(null);
       resetNarrativeTyping();
 
       try {
+        logTiming("before fetch");
         const response = await fetch("/agent-team/api/agent-team/diagnosis/complete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nextRetryRecordId ? { quizResultId: nextRetryRecordId, retryNarrative: true } : { answers: current.answers }),
         });
+        logTiming("after fetch response");
 
         if (!response.ok || !response.body) {
           const payload = await response.json().catch(() => null);
@@ -130,30 +149,63 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
         }
 
         setStatus("streaming");
+        logTiming("before stream read");
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         let hasStreamError = false;
+        let loggedFirstChunk = false;
+        let loggedFirstSaved = false;
+        let loggedFirstPatch = false;
+        let loggedFirstPatchHandled = false;
 
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
+          if (!loggedFirstChunk) {
+            loggedFirstChunk = true;
+            logTiming("first response chunk");
+          }
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
           for (const line of lines) {
             const event = parseStreamEventLine(line);
             if (!event) continue;
+            if (event.type === "saved" && !loggedFirstSaved) {
+              loggedFirstSaved = true;
+              logTiming("first saved event");
+            }
+            if (event.type === "patch" && !loggedFirstPatch) {
+              loggedFirstPatch = true;
+              logTiming("first patch event");
+            }
             if (event.type === "error") hasStreamError = true;
             handleStreamEvent(event, current);
+            if (event.type === "patch" && !loggedFirstPatchHandled) {
+              loggedFirstPatchHandled = true;
+              logTiming("first patch handled");
+            }
           }
         }
 
         if (buffer.trim()) {
           const event = parseStreamEventLine(buffer);
           if (event) {
+            if (event.type === "saved" && !loggedFirstSaved) {
+              loggedFirstSaved = true;
+              logTiming("first saved event");
+            }
+            if (event.type === "patch" && !loggedFirstPatch) {
+              loggedFirstPatch = true;
+              logTiming("first patch event");
+            }
             if (event.type === "error") hasStreamError = true;
             handleStreamEvent(event, current);
+            if (event.type === "patch" && !loggedFirstPatchHandled) {
+              loggedFirstPatchHandled = true;
+              logTiming("first patch handled");
+            }
           }
         }
         if (!hasStreamError && (typingActiveRef.current || typingQueueRef.current.length > 0 || finalNarrativeRef.current)) {
@@ -175,6 +227,22 @@ export function RequirementsResultClient({ initialRecord }: RequirementsResultCl
   }, [handleStreamEvent, resetNarrativeTyping]);
 
   useEffect(() => resetNarrativeTyping, [resetNarrativeTyping]);
+
+  useEffect(() => {
+    const timingStartedAt = diagnosisTimingStartedAtRef.current;
+    if (!timingStartedAt || firstNarrativeRenderLoggedRef.current || !result?.narrative) return;
+
+    const hasVisibleNarrativeText = result.narrative.actionInsights.some(Boolean)
+      || Object.values(result.narrative.actionPlan).some(Boolean)
+      || Object.values(result.narrative.closing).some(Boolean);
+
+    if (!hasVisibleNarrativeText) return;
+
+    firstNarrativeRenderLoggedRef.current = true;
+    console.log("[diagnosis.client]", "first narrative rendered", {
+      elapsedMs: Math.round(performance.now() - timingStartedAt),
+    });
+  }, [result?.narrative]);
 
   useEffect(() => {
     queueMicrotask(() => {
