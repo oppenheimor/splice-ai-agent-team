@@ -316,7 +316,6 @@ function Section({
       <div className="grid gap-2 md:grid-cols-[72px_minmax(0,1fr)_auto] md:items-start">
         <span className="text-xs font-black tracking-[0.18em] text-[#8a8a86]">{index}</span>
         <h2 className={`text-[24px] font-black leading-tight ${diagnosisSerif}`}>{title}</h2>
-        {status === "saving" || status === "streaming" ? <Badge variant="secondary" className={diagnosisOutlineBadge}>生成中</Badge> : null}
       </div>
       {errorMessage ? (
         <div className="mt-5 flex items-center justify-between gap-3 bg-[#f7f7f3] px-4 py-3 text-sm text-[#2e2f2d]">

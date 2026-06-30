@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     }
 
     const result = streamText({
-      model: deepseek(process.env.DEEPSEEK_MODEL || "deepseek-chat"),
+      model: deepseek("deepseek-chat"),
       system: buildNarrativeSystemPrompt(),
       prompt: JSON.stringify(dto.result),
       temperature: 0.68,
