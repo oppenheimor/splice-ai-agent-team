@@ -29,24 +29,50 @@ jobs:
               -u '${{ secrets.VOLCENGINE_CR_USERNAME }}' \
               --password-stdin
 
-      # ── 3. 设置 Docker Buildx ──
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-        with:
-          driver: docker-container
+      # ── 3. 准备 Docker Buildx Builder ──
+      - name: Prepare Docker Buildx builder
+        run: |
+          set -euo pipefail
+
+          docker buildx version
+
+          BUILDER_NAME=agent-team-builder
+          BUILDKIT_IMAGE=m.daocloud.io/docker.io/moby/buildkit:buildx-stable-1
+
+          if docker buildx inspect "${BUILDER_NAME}" >/dev/null 2>&1; then
+            docker buildx use "${BUILDER_NAME}"
+          else
+            docker buildx create \
+              --name "${BUILDER_NAME}" \
+              --driver docker-container \
+              --driver-opt image="${BUILDKIT_IMAGE}" \
+              --use
+          fi
+
+          if ! docker buildx inspect --bootstrap; then
+            docker buildx rm "${BUILDER_NAME}" || true
+            docker buildx create \
+              --name "${BUILDER_NAME}" \
+              --driver docker-container \
+              --driver-opt image="${BUILDKIT_IMAGE}" \
+              --use
+            docker buildx inspect --bootstrap
+          fi
 
       # ── 4. 构建 & 推送 ──
       - name: Build & Push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+        run: |
+          set -euo pipefail
+
+          docker buildx build \
+            --builder agent-team-builder \
+            --progress=plain \
+            --cache-from type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache \
+            --cache-to type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            --push \
+            .
 
       # ── 5. 准备 SSH ──
       - name: Prepare SSH key

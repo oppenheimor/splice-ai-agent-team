@@ -8,6 +8,27 @@
 
 核心变化不是让报告更长，而是让系统先完成业务横向扫描、瓶颈定位、假设树、证据对照、质量 Gate，再生成诊断报告。目标是让用户感觉“这份诊断确实理解了我的业务现场，而且钱花得值”。
 
+## Agent 六大支柱现状判断
+
+更新时间：2026-06-30
+
+结论：`deep-diagnosis` 当前不是完整 Agent Framework，而是“强产品化单 Agent + 局部 Harness”。六大支柱里，Loop / Tool / Context / Harness 已有部分实现，Memory / Multi-Agent 基本欠缺。
+
+| 支柱 | 当前状态 | 已实现 | 欠缺 |
+| --- | --- | --- | --- |
+| Loop | 部分实现 | `lib/agent-team/chat/loop-engine.ts` 为 `deep-diagnosis` 配置 `maxTurns: 10`、`contextManagement: true`、`reportQualityGate: true`；`app/api/agent-team/chat/route.ts` 接入 `streamText`、`stopWhen` 和 `buildAgentStopCondition`。 | 循环主体仍由 Vercel AI SDK 控制，不是自研可编排 loop；退出条件主要是步数保险丝，缺少按业务状态、预算、工具失败、质量收敛等维度组合的退出条件。 |
+| Tool | 部分实现 | `lib/agent-team/agents/registry.ts` 通过静态 manifest 声明工具；AGUI 工具和外部工具被映射为 AI SDK tools；`lib/deep-diagnosis/tool-guard.ts` 可按决策策略裁剪 `activeTools`。 | 工具注册是静态枚举，不支持运行时动态加载；没有 MCP client / server 原生支持，也没有 MCP adapter 层；工具执行缺少完整的权限审批、结果预算、错误整形和审计管线。 |
+| Context | 中等实现 | `lib/deep-diagnosis/context-manager.ts` 注入 managed context；`lib/deep-diagnosis/runtime-state.ts` 聚合结构化运行状态、事实卡、证据视图、报告就绪度和质量 Gate；chat route 会裁剪最近消息和单条文本长度。 | 不是自动 compact service；没有 prompt cache 布局意识；上下文爆窗主要靠 `slice(-14)` 和字符截断，框架不会自动摘要旧对话、落盘大工具结果或恢复长任务状态。 |
+| Memory | 很弱 | `memoryPolicy: { mode: "session" }` 表明当前只支持会话级记忆；数据库会保存会话、消息、运行记录和 validation metadata。 | 没有跨会话语义记忆、向量检索、文件级记忆选择、长期 memory 注入，也没有用户 / 项目 / Agent 分层记忆策略。 |
+| Multi-Agent | 基本没有 | 代码目录名是 `agent-team`，并支持多个 Agent manifest；`deep-diagnosis` 自身作为一个 Agent 运行。 | 实际没有 sub-agent、上下文隔离、fan-out/fan-in、supervisor、producer-reviewer、递归深度限制或多 Agent 通信协议。 |
+| Harness | 部分较强 | 已有决策策略层、结构化状态门禁、工具 guard、输出 validator、质量 Gate、行为 fixture、运行记录、积分预扣和失败退款；`app/api/agent-team/chat/route.ts` 中的 system prompt 日志已移除。 | 缺少权限分级、沙箱、工具执行管线、MCP、Generator/Evaluator 编排、预算保险丝、统一可观测性和可重放执行流。 |
+
+后续补齐优先级：
+
+1. 先补 Harness 安全底座：补工具权限 / 结果预算 / 错误整形、把工具调用审计结构化。
+2. 再补 Context 工程：把当前字符截断升级为摘要压缩、证据落盘引用和 cache-friendly 上下文布局。
+3. 最后再考虑 Multi-Agent：只有当并行探索、隔离验证或 Generator/Evaluator 明确带来收益时，再引入 sub-agent，避免为了架构名词增加协调成本。
+
 ## 重要约束
 
 - Repo：`/Users/paulchess/Desktop/Home/entrepreneurship/splice-ai-agent-team`
