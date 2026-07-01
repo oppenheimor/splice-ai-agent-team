@@ -103,6 +103,7 @@ export type LandingPriority = {
   label: string;
   description: string;
   firstStep: string;
+  toolRecommendations?: string[];
 };
 
 export type DiagnosisNarrative = {

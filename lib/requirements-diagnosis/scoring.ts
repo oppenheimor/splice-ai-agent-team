@@ -31,15 +31,19 @@ type DimensionConfig = {
   questions: QuestionId[];
 };
 
+// v3: 每维度 2 道题，q1-q10 为经营画像
 const dimensionConfigs: DimensionConfig[] = [
-  { code: "V", label: "商业视野", leftLabel: "深耕", rightLabel: "拓展", leftLetter: "D", rightLetter: "E", questions: ["q1", "q2", "q14"] },
-  { code: "D", label: "判断方式", leftLabel: "经验判断", rightLabel: "数据验证", leftLetter: "G", rightLetter: "P", questions: ["q3", "q15", "q16"] },
-  { code: "E", label: "组织落地", leftLabel: "系统重构", rightLabel: "快速试水", leftLetter: "R", rightLetter: "A", questions: ["q4", "q13", "q17"] },
-  { code: "A", label: "投入心智", leftLabel: "成本优先", rightLabel: "长期投入", leftLetter: "C", rightLetter: "L", questions: ["q5", "q18", "q19"] },
-  { code: "B", label: "风险策略", leftLabel: "风险防守", rightLabel: "创新进攻", leftLetter: "S", rightLetter: "I", questions: ["q6", "q7", "q20"] },
+  { code: "V", label: "商业视野", leftLabel: "深耕", rightLabel: "拓展", leftLetter: "D", rightLetter: "E", questions: ["q1", "q2"] },
+  { code: "D", label: "判断方式", leftLabel: "经验判断", rightLabel: "数据验证", leftLetter: "G", rightLetter: "P", questions: ["q3", "q4"] },
+  { code: "E", label: "组织落地", leftLabel: "系统重构", rightLabel: "快速试水", leftLetter: "R", rightLetter: "A", questions: ["q5", "q6"] },
+  { code: "A", label: "投入心智", leftLabel: "成本优先", rightLabel: "长期投入", leftLetter: "C", rightLetter: "L", questions: ["q7", "q8"] },
+  { code: "B", label: "风险策略", leftLabel: "风险防守", rightLabel: "创新进攻", leftLetter: "S", rightLetter: "I", questions: ["q9", "q10"] },
 ];
 
-// ─── 用户类型映射 ────────────────────────────────────────────────
+// diff 低于此阈值视为平衡，4选项 2题最小非零 diff ≈ 34%，故 < 20 仅捕获精确平局（diff=0）
+const BALANCE_THRESHOLD = 20;
+
+// ─── 用户类型映射（由 q12 AI关注偏好决定）─────────────────────────
 
 const userTypeMap = {
   A: { code: "TE", label: "技术探索者", english: "Tech Explorer" },
@@ -47,7 +51,7 @@ const userTypeMap = {
   C: { code: "AP", label: "应用实践者", english: "Application Practitioner" },
 } as const;
 
-// ─── AI 刚需方向 ─────────────────────────────────────────────────
+// ─── AI 刚需方向（q20）──────────────────────────────────────────
 
 const justNeedMap: Record<string, string> = {
   A: "重复性执行工作",
@@ -57,9 +61,9 @@ const justNeedMap: Record<string, string> = {
   E: "复杂系统与流程",
 };
 
-// ─── AI 认知盲区 ─────────────────────────────────────────────────
+// ─── AI 认知盲区（q19 多选缺失项）──────────────────────────────
 
-const q11BlindSpotMap = {
+const q19BlindSpotMap = {
   A: "让 AI 接住资料整理、邮件处理和通用方案初稿，省下你的基础执行时间",
   B: "让 AI 承担内容创作和宣传素材，把灵感变成稳定产能",
   C: "让 AI 做市场调研、竞品分析和数据整理，减少拍脑袋决策",
@@ -84,7 +88,6 @@ const operatorTypeMap: Record<string, { name: string; definition: string; trait:
   VB: { name: "平衡统筹型", trait: "平衡统筹", definition: "各维度没有明显极端倾向，适合先明确业务优先级，再选 AI 切入点。" },
 };
 
-// diff 相同时按此优先级决定主导维度
 const operatorTieBreakPriority: DimensionCode[] = ["E", "A", "B", "D", "V"];
 
 // ─── AI 落地阶段标签 ─────────────────────────────────────────────
@@ -97,7 +100,7 @@ export const aiAdoptionStageLabels: Record<string, string> = {
   L5: "全域刚需层",
 };
 
-// ─── AI 关注偏好 / 落地方式 / 阻力映射 ──────────────────────────
+// ─── AI 关注偏好（q12）──────────────────────────────────────────
 
 const aiConcernMap: Record<string, AiConcern> = {
   A: { code: "A", label: "技术前沿关注", description: "你更关注 AI 的技术可能性与新能力边界，适合在深度诊断中探讨把技术转化为业务价值的路径。" },
@@ -105,30 +108,62 @@ const aiConcernMap: Record<string, AiConcern> = {
   C: { code: "C", label: "学习成长关注", description: "你想系统地上手 AI，适合在深度诊断中梳理从工具熟悉到场景落地的完整学习路径。" },
 };
 
+// ─── AI 落地方式偏好（q22，4 选项 A-D）──────────────────────────
+
 const aiLandingPreferenceMap: Record<string, AiLandingPreference> = {
   A: { code: "A", label: "自主上手", description: "你更倾向自己先学会工具，深度诊断适合从工具入门路径和自学资源开始。" },
   B: { code: "B", label: "模板复用", description: "你更倾向套用已验证的做法，深度诊断适合从行业模板和最佳实践案例切入。" },
   C: { code: "C", label: "小流程验证", description: "你更倾向先跑通一个小场景，深度诊断适合直接定位第一个可落地的自动化流程。" },
-  D: { code: "D", label: "团队导入", description: "你更倾向团队整体导入，深度诊断适合讨论组织变更和统一工作流设计。" },
-  E: { code: "E", label: "定制方案", description: "你更倾向有人帮你对接结果，深度诊断可以直接进入场景定制和方案交付环节。" },
+  D: { code: "D", label: "定制方案", description: "你更倾向有人帮你对接结果，深度诊断可以直接进入场景定制和方案交付环节。" },
 };
+
+// ─── AI 落地主要阻力（q23，4 选项 A-D）─────────────────────────
 
 const aiBlockerMap: Record<string, AiBlocker> = {
   A: { code: "A", label: "场景不清晰", description: "不知道从哪个业务场景开始——深度诊断会帮你定位 3 个最值得试点的优先场景。" },
   B: { code: "B", label: "方法论缺失", description: "缺少工具方法——深度诊断会梳理适合你现状的工具组合和落地 SOP。" },
-  C: { code: "C", label: "数据与流程混乱", description: "现有数据和流程比较混乱——深度诊断会帮你先做最小化梳理，再确定 AI 切入点。" },
-  D: { code: "D", label: "团队执行阻力", description: "团队接受度和习惯是瓶颈——深度诊断会讨论如何降低阻力、从最容易接受的环节开始。" },
-  E: { code: "E", label: "ROI 不确定", description: "担心投入产出不清晰——深度诊断会帮你建立可量化的验收指标，先跑通最小验证环。" },
+  C: { code: "C", label: "流程与执行阻力", description: "现有流程混乱或团队执行习惯跟不上——深度诊断会帮你先做最小化梳理，再确定 AI 切入点。" },
+  D: { code: "D", label: "ROI 不确定", description: "担心投入产出不清晰——深度诊断会帮你建立可量化的验收指标，先跑通最小验证环。" },
 };
 
-// ─── AI 落地优先场景 ─────────────────────────────────────────────
+// ─── AI 落地优先场景（q20）+ 具体工具推荐 ──────────────────────
 
 const landingPriorityMap: Record<string, LandingPriority> = {
-  A: { code: "A", label: "重复执行提效", description: "从规则明确、重复度高的执行类工作入手，是风险最低、见效最快的 AI 切入点。", firstStep: "列出每周最耗时的 3 个重复动作，选最能被 AI 替代的那一个先跑一轮。" },
-  B: { code: "B", label: "内容与创意产出", description: "内容创作是 AI 当前落地最成熟的方向之一，适合快速出产品原型和验证效果。", firstStep: "选一种内容类型（如小红书稿/视频脚本），用 AI 跑完从输入到可用草稿的完整流程。" },
-  C: { code: "C", label: "客户转化与服务", description: "客服、销售和私域运营是人力密集型场景，AI 能显著提升响应速度和覆盖密度。", firstStep: "梳理一条客户跟进流程，把重复性回复和阶段推进动作提取出来交给 AI 辅助。" },
-  D: { code: "D", label: "经营分析与复盘", description: "AI 能大幅降低数据整理和分析的门槛，让经营决策更快有数据支撑。", firstStep: "选一个最常拍脑袋决策的场景，用 AI 帮你先做一版竞品或数据分析。" },
-  E: { code: "E", label: "流程自动化", description: "多环节流程自动化是 AI 带来杠杆效应最大的方向，适合有一定组织基础的团队。", firstStep: "选一条从输入到交付有 3 个以上环节的流程，先画出流程图，再逐步引入 AI 节点。" },
+  A: {
+    code: "A",
+    label: "重复执行提效",
+    description: "从规则明确、重复度高的执行类工作入手，是风险最低、见效最快的 AI 切入点。",
+    firstStep: "列出每周最耗时的 3 个重复动作，选最能被 AI 替代的那一个先跑一轮。",
+    toolRecommendations: ["ChatGPT / Claude — 方案初稿、邮件生成、内容整理", "n8n / Zapier — 触发器 + 自动化流程搭建"],
+  },
+  B: {
+    code: "B",
+    label: "内容与创意产出",
+    description: "内容创作是 AI 当前落地最成熟的方向之一，适合快速出产品原型和验证效果。",
+    firstStep: "选一种内容类型（如小红书稿/视频脚本），用 AI 跑完从输入到可用草稿的完整流程。",
+    toolRecommendations: ["豆包 / 元宝 — 文案、标题、脚本生成", "即梦 / 可灵 — 图片与短视频素材生成", "剪映 AI — 视频剪辑与字幕自动化"],
+  },
+  C: {
+    code: "C",
+    label: "客户转化与服务",
+    description: "客服、销售和私域运营是人力密集型场景，AI 能显著提升响应速度和覆盖密度。",
+    firstStep: "梳理一条客户跟进流程，把重复性回复和阶段推进动作提取出来交给 AI 辅助。",
+    toolRecommendations: ["Coze / 扣子 — 搭建客服与销售 Agent", "企微 + AI 私信模板 — 私域运营自动化"],
+  },
+  D: {
+    code: "D",
+    label: "经营分析与复盘",
+    description: "AI 能大幅降低数据整理和分析的门槛，让经营决策更快有数据支撑。",
+    firstStep: "选一个最常拍脑袋决策的场景，用 AI 帮你先做一版竞品或数据分析。",
+    toolRecommendations: ["Claude / Kimi — 长文档分析与竞品报告生成", "DeepSeek — 数据推理与结构化经营分析"],
+  },
+  E: {
+    code: "E",
+    label: "流程自动化",
+    description: "多环节流程自动化是 AI 带来杠杆效应最大的方向，适合有一定组织基础的团队。",
+    firstStep: "选一条从输入到交付有 3 个以上环节的流程，先画出流程图，再逐步引入 AI 节点。",
+    toolRecommendations: ["n8n / Dify — 工作流搭建与 Agent 编排", "Coze — 多 Agent 协同与业务流程自动化"],
+  },
 };
 
 // ─── 主要导出函数 ─────────────────────────────────────────────────
@@ -143,8 +178,8 @@ export function normalizeQuizAnswers(input: QuizAnswers): Required<QuizAnswers> 
         ? answer.filter((v) => hasOption(question.id, v))
         : [];
       if (values.length === 0) throw new Error(`MISSING_${question.id.toUpperCase()}`);
-      // q10"还没有任何工具"和其他工具互斥，避免 AI 落地阶段被脏组合误判。
-      if (question.id === "q10" && values.includes("E")) {
+      // q14"还没有任何工具"和其他工具互斥，避免 AI 落地阶段被脏组合误判。
+      if (question.id === "q14" && values.includes("E")) {
         normalized[question.id] = ["E"];
         continue;
       }
@@ -164,20 +199,22 @@ export function calculateDiagnosis(input: QuizAnswers): DiagnosisResult {
   const answers = normalizeQuizAnswers(input);
   const dimensionScores = calculateDimensionScores(answers);
   const featureCode = buildFeatureCode(Object.values(dimensionScores));
-  const userType = userTypeMap[answers.q8 as "A" | "B" | "C"];
+  // q12 = AI 关注偏好（A=技术/B=商业/C=学习），决定用户类型
+  const userType = userTypeMap[answers.q12 as "A" | "B" | "C"];
   const operatorCode = `${featureCode}-${userType.code}`;
   const operatorType = buildOperatorType(Object.values(dimensionScores));
   const aiAdoptionStage = calculateAiAdoptionStage(answers);
   const aiAdoptionStageLabel = aiAdoptionStageLabels[aiAdoptionStage];
   const aiReadiness = buildAiReadiness(answers, aiAdoptionStage);
-  const aiConcern = aiConcernMap[answers.q8 as string] || aiConcernMap.B;
-  const aiLandingPreference = aiLandingPreferenceMap[answers.q23 as string] || aiLandingPreferenceMap.C;
-  const aiBlocker = aiBlockerMap[answers.q24 as string] || aiBlockerMap.A;
-  const landingPriority = landingPriorityMap[answers.q12 as string] || landingPriorityMap.A;
-  const selectedCognition = answers.q11 as QuizOptionValue[];
+  const aiConcern = aiConcernMap[answers.q12 as string] || aiConcernMap.B;
+  // q22 = 落地方式偏好，q23 = 主要阻力，q20 = 刚需诉求
+  const aiLandingPreference = aiLandingPreferenceMap[answers.q22 as string] || aiLandingPreferenceMap.B;
+  const aiBlocker = aiBlockerMap[answers.q23 as string] || aiBlockerMap.A;
+  const landingPriority = landingPriorityMap[answers.q20 as string] || landingPriorityMap.A;
+  const selectedCognition = answers.q19 as QuizOptionValue[];
   const cognitiveWidth = calculateCognitiveWidth(selectedCognition.length);
   const blindSpots = buildBlindSpots(selectedCognition);
-  const justNeedLabel = justNeedMap[answers.q12 as string] || justNeedMap.A;
+  const justNeedLabel = justNeedMap[answers.q20 as string] || justNeedMap.A;
   const crowdType = calculateCrowdType(userType.code, aiAdoptionStage);
   const recommendation = buildRecommendation(userType.code, aiAdoptionStage);
 
@@ -200,7 +237,7 @@ export function calculateDiagnosis(input: QuizAnswers): DiagnosisResult {
     userTypeLabel: userType.label,
     cognitiveWidth,
     blindSpots,
-    justNeed: String(answers.q12),
+    justNeed: String(answers.q20),
     justNeedLabel,
     crowdType,
     recommendation,
@@ -239,7 +276,7 @@ function calculateDimensionScores(answers: Required<QuizAnswers>): Record<Dimens
   const entries = dimensionConfigs.map((config) => {
     const raw = config.questions.reduce<RawDimensionScore>(
       (acc, qId) => {
-        const c = scoreFiveOption(answers[qId] as QuizOptionValue);
+        const c = scoreFourOption(answers[qId] as QuizOptionValue);
         return { left: acc.left + c.left, right: acc.right + c.right };
       },
       { left: 0, right: 0 },
@@ -267,19 +304,17 @@ function calculateDimensionScores(answers: Required<QuizAnswers>): Record<Dimens
   return Object.fromEntries(entries) as unknown as Record<DimensionCode, DimensionScore>;
 }
 
-// 五档映射：A 强左 → E 强右，C 为正中间
-function scoreFiveOption(answer: QuizOptionValue): RawDimensionScore {
+// 四档映射：A 强左 → D 强右，去掉中间平衡选项，强迫做选择
+function scoreFourOption(answer: QuizOptionValue): RawDimensionScore {
   if (answer === "A") return { left: 1, right: 0 };
-  if (answer === "B") return { left: 0.75, right: 0.25 };
-  if (answer === "C") return { left: 0.5, right: 0.5 };
-  if (answer === "D") return { left: 0.25, right: 0.75 };
-  if (answer === "E") return { left: 0, right: 1 };
+  if (answer === "B") return { left: 0.67, right: 0.33 };
+  if (answer === "C") return { left: 0.33, right: 0.67 };
+  if (answer === "D") return { left: 0, right: 1 };
   return { left: 0.5, right: 0.5 };
 }
 
-// diff < 15% 时按平衡处理（三题取平均后阈值适当收窄）
 function getDominantSide(diff: number, left: number, right: number): "left" | "right" | "balanced" {
-  if (diff < 15) return "balanced";
+  if (diff < BALANCE_THRESHOLD) return "balanced";
   return left >= right ? "left" : "right";
 }
 
@@ -293,20 +328,18 @@ function getDominantLabel(config: DimensionConfig, side: "left" | "right" | "bal
   return side === "left" ? config.leftLabel : config.rightLabel;
 }
 
-// 倾向强度：diff 越大星越少（1 星 = 极端显著倾向）
 function getStars(diff: number): number {
   if (diff >= 50) return 1;
   if (diff >= 25) return 2;
-  if (diff >= 15) return 3;
+  if (diff >= BALANCE_THRESHOLD) return 3;
   return 4;
 }
 
 // ─── 经营代码 & 人格 ─────────────────────────────────────────────
 
 function buildFeatureCode(scores: DimensionScore[]): string {
-  // 取 diff 最大的两个显著维度，diff 相同时按业务优先级 tie-break
   const prominent = scores
-    .filter((s) => s.diff >= 15)
+    .filter((s) => s.diff >= BALANCE_THRESHOLD)
     .sort(compareOperatorPriority);
   if (prominent.length === 0) return "VB";
   if (prominent.length === 1) return prominent[0].dominantLetter.repeat(2);
@@ -314,7 +347,7 @@ function buildFeatureCode(scores: DimensionScore[]): string {
 }
 
 function buildOperatorType(scores: DimensionScore[]): DiagnosisResult["operatorType"] {
-  const prominent = scores.filter((s) => s.diff >= 15);
+  const prominent = scores.filter((s) => s.diff >= BALANCE_THRESHOLD);
   if (!prominent.length) {
     const t = operatorTypeMap.VB;
     return { code: "VB", name: t.name, definition: t.definition, primaryTrait: t.trait, secondaryTrait: null };
@@ -338,30 +371,30 @@ function compareOperatorPriority(a: DimensionScore, b: DimensionScore): number {
 // ─── AI 落地阶段 ─────────────────────────────────────────────────
 
 function calculateAiAdoptionStage(answers: Required<QuizAnswers>): string {
-  const q8 = answers.q8 as string;
-  const q9 = answers.q9 as string;
-  const q10 = new Set(answers.q10 as QuizOptionValue[]);
-  const q22 = answers.q22 as string;
+  const q12 = answers.q12 as string; // AI 关注偏好
+  const q13 = answers.q13 as string; // 日均使用时长
+  const q14 = new Set(answers.q14 as QuizOptionValue[]); // 已常态化工具
+  const q15 = answers.q15 as string; // 工作流融合程度
 
-  const hasNoTool = q10.has("E");
-  const hasChatTool = q10.has("A");
-  const hasBuilderTool = q10.has("B");
-  const hasCodeTool = q10.has("C");
-  const hasAgentTool = q10.has("D");
+  const hasNoTool = q14.has("E");
+  const hasChatTool = q14.has("A");
+  const hasBuilderTool = q14.has("B");
+  const hasCodeTool = q14.has("C");
+  const hasAgentTool = q14.has("D");
   const hasAdvancedTool = hasBuilderTool || hasCodeTool || hasAgentTool;
-  const toolCount = hasNoTool ? 0 : q10.size;
-  const isHighUsage = q9 === "C" || q9 === "D";
-  const isMidUsage = q9 === "B";
-  // q22 反映工作流真实融合程度，补充工具数量判断的不足
-  const workflowLevel = { A: 0, B: 1, C: 2, D: 3, E: 4 }[q22] ?? 0;
+  const toolCount = hasNoTool ? 0 : q14.size;
+  const isHighUsage = q13 === "C" || q13 === "D";
+  const isMidUsage = q13 === "B";
+  // q15 反映工作流真实融合程度（4 选项 A-D），补充工具数量判断
+  const workflowLevel = { A: 0, B: 1, C: 2, D: 3 }[q15] ?? 0;
 
-  if (hasNoTool || (q9 === "A" && workflowLevel === 0)) return "L1";
+  if (hasNoTool || (q13 === "A" && workflowLevel === 0)) return "L1";
 
-  // L5：高强度使用 + 多种高阶工具 + 工作流真正融合 + 商业结果导向
-  if (q8 === "B" && isHighUsage && hasChatTool && hasAdvancedTool && toolCount >= 3 && workflowLevel >= 3) return "L5";
-  // L4：高频使用且有高阶工具，但工作流融合不够深
+  // L5：商业结果导向 + 高强度使用 + 多种高阶工具 + 工作流真正融合
+  if (q12 === "B" && isHighUsage && hasChatTool && hasAdvancedTool && toolCount >= 3 && workflowLevel >= 3) return "L5";
+  // L4：高频使用且有高阶工具，工作流融合还不够深
   if (isHighUsage && hasAdvancedTool) return "L4";
-  // L3：中频使用 + 有聊天工具 + 工作流已进入固定场景
+  // L3：中频或高频 + 聊天工具 + 工作流已进入固定场景
   if ((isMidUsage || isHighUsage) && hasChatTool && workflowLevel >= 2) return "L3";
   // L2：有聊天工具但使用较浅或工作流融合弱
   if (hasChatTool) return "L2";
@@ -372,10 +405,13 @@ function calculateAiAdoptionStage(answers: Required<QuizAnswers>): string {
 // ─── AI 成熟度四轴 ───────────────────────────────────────────────
 
 function buildAiReadiness(answers: Required<QuizAnswers>, stage: string): AiReadinessProfile {
-  const attitudeScore = { A: 10, B: 30, C: 55, D: 75, E: 95 }[answers.q21 as string] ?? 50;
-  const usageScore = { A: 10, B: 40, C: 65, D: 90 }[answers.q9 as string] ?? 30;
-  const workflowScore = { A: 5, B: 25, C: 55, D: 75, E: 95 }[answers.q22 as string] ?? 30;
-  const toolSet = new Set(answers.q10 as QuizOptionValue[]);
+  // q11 = AI 态度（4 选项 A-D），决定态度轴
+  const attitudeScore = { A: 10, B: 35, C: 65, D: 90 }[answers.q11 as string] ?? 35;
+  // q13 = 日均使用时长
+  const usageScore = { A: 10, B: 40, C: 65, D: 90 }[answers.q13 as string] ?? 30;
+  // q15 = 工作流融合（4 选项 A-D，去掉了原 q22 的 E 档）
+  const workflowScore = { A: 5, B: 30, C: 60, D: 90 }[answers.q15 as string] ?? 30;
+  const toolSet = new Set(answers.q14 as QuizOptionValue[]);
   const toolingScore = toolSet.has("E")
     ? 5
     : Math.min(95, (toolSet.has("C") || toolSet.has("D") ? 40 : 0) + (toolSet.has("B") ? 20 : 0) + (toolSet.has("A") ? 15 : 0) + toolSet.size * 5);
@@ -394,21 +430,21 @@ function buildAiReadiness(answers: Required<QuizAnswers>, stage: string): AiRead
       label: "AI 态度",
       score: attitudeScore,
       level: axisLevel(attitudeScore),
-      insight: buildAttitudeInsight(answers.q21 as string),
+      insight: buildAttitudeInsight(answers.q11 as string),
     },
     usage: {
       code: "usage",
       label: "使用强度",
       score: usageScore,
       level: axisLevel(usageScore),
-      insight: buildUsageInsight(answers.q9 as string),
+      insight: buildUsageInsight(answers.q13 as string),
     },
     workflow: {
       code: "workflow",
       label: "工作流融合",
       score: workflowScore,
       level: axisLevel(workflowScore),
-      insight: buildWorkflowInsight(answers.q22 as string),
+      insight: buildWorkflowInsight(answers.q15 as string),
     },
     tooling: {
       code: "tooling",
@@ -425,36 +461,34 @@ function buildAiReadiness(answers: Required<QuizAnswers>, stage: string): AiRead
   return { total, level: stageLevel, label: aiAdoptionStageLabels[stage] || stage, summary, axes };
 }
 
-function buildAttitudeInsight(q21: string): string {
+function buildAttitudeInsight(q11: string): string {
   const map: Record<string, string> = {
     A: "目前处于观望阶段，对 AI 效果还有疑虑。深度诊断可以先从一个低风险场景建立信心。",
     B: "有兴趣但需要更多案例支撑。深度诊断适合先看看同类业务的落地案例。",
     C: "已有初步体验，正在寻找更值得深入的场景。",
     D: "认可 AI 价值，准备系统化落地。深度诊断可以直接规划工作流。",
-    E: "已把 AI 视为核心变量，深度诊断可以直接进入业务系统化升级阶段。",
   };
-  return map[q21] || map.C;
+  return map[q11] || map.B;
 }
 
-function buildUsageInsight(q9: string): string {
+function buildUsageInsight(q13: string): string {
   const map: Record<string, string> = {
     A: "日常工作中 AI 使用极少，还没形成使用习惯。",
     B: "每天有 1-2 小时 AI 使用，正在建立使用节奏。",
     C: "每天 2-4 小时，AI 已经进入工作流的重要部分。",
     D: "4 小时以上，AI 是你日常工作的核心工具之一。",
   };
-  return map[q9] || map.A;
+  return map[q13] || map.A;
 }
 
-function buildWorkflowInsight(q22: string): string {
+function buildWorkflowInsight(q15: string): string {
   const map: Record<string, string> = {
     A: "AI 尚未融入工作流，仍停留在偶尔了解阶段。",
     B: "个人临时使用阶段，还没有固定场景。",
     C: "已有一个固定使用场景，这是很好的起点。",
-    D: "多个场景有固定用法，下一步是形成系统闭环。",
-    E: "AI 已进入团队协作和业务流程，开始影响交付方式。",
+    D: "多个场景有固定用法，或已进入团队协作流程，下一步是形成系统闭环。",
   };
-  return map[q22] || map.A;
+  return map[q15] || map.A;
 }
 
 function buildToolingInsight(toolSet: Set<QuizOptionValue>): string {
@@ -497,10 +531,10 @@ function buildBlindSpots(selected: QuizOptionValue[]): string[] {
   if (selected.length >= 5) return [];
   const selectedSet = new Set(selected);
   // 盲区最多取前三，避免结果页变成负面清单
-  return (Object.keys(q11BlindSpotMap) as Array<keyof typeof q11BlindSpotMap>)
+  return (Object.keys(q19BlindSpotMap) as Array<keyof typeof q19BlindSpotMap>)
     .filter((k) => !selectedSet.has(k))
     .slice(0, 3)
-    .map((k) => q11BlindSpotMap[k]);
+    .map((k) => q19BlindSpotMap[k]);
 }
 
 function calculateCrowdType(userType: "TE" | "EP" | "AP", stage: string): string {

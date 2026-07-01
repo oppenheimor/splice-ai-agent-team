@@ -85,6 +85,21 @@ export default function DiagnosisAiAdoptionProfile({
         <p className="text-xs font-medium text-indigo-700 mb-1">建议第一步</p>
         <p className="text-sm text-indigo-800 leading-relaxed">{landingPriority.firstStep}</p>
       </div>
+
+      {/* 推荐工具 */}
+      {landingPriority.toolRecommendations && landingPriority.toolRecommendations.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-slate-500">推荐工具</p>
+          <ul className="space-y-1">
+            {landingPriority.toolRecommendations.map((tool) => (
+              <li key={tool} className="flex items-start gap-2 text-xs text-slate-600">
+                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-400" />
+                {tool}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
