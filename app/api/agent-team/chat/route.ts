@@ -140,7 +140,6 @@ export async function POST(request: NextRequest) {
         agentRunId: runId,
       });
     }
-    console.log(buildSystemPrompt(agent, diagnosis?.context))
     const systemMessages = [
       { role: "system" as const, content: buildSystemPrompt(agent, diagnosis?.context) },
       { role: "system" as const, content: buildRuntimeContext({ timeZone: input.timeZone }) },
