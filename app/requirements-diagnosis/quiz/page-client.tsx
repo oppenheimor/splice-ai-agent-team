@@ -81,9 +81,9 @@ export function RequirementsQuizClient({ questions }: RequirementsQuizClientProp
     if (selected.has(value)) {
       selected.delete(value);
     } else {
-      // Q10 的“还没有任何 AI 工具进入日常工作”和其他工具互斥，避免 AI 落地阶段被脏组合误判。
-      if (question.id === "q10" && value === "E") selected.clear();
-      if (question.id === "q10" && value !== "E") selected.delete("E");
+      // Q14 的“还没有任何 AI 工具进入日常工作”和其他工具互斥，避免 AI 落地阶段被脏组合误判。
+      if (question.id === "q14" && value === "E") selected.clear();
+      if (question.id === "q14" && value !== "E") selected.delete("E");
       selected.add(value);
     }
     updateAnswer(question.id, [...selected] as QuizOptionValue[]);

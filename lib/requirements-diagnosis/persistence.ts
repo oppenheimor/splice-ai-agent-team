@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
+import { quizQuestions } from "./quiz";
 import { calculateDiagnosis, mergeNarrative } from "./scoring";
-import type { DiagnosisNarrative, DiagnosisResult, QuizAnswers } from "./types";
+import type { DiagnosisNarrative, DiagnosisResult, QuizAnswerValue, QuizAnswers, QuizOptionValue, QuestionId } from "./types";
 
 type StoredDiagnosis = {
   id: string;
@@ -83,31 +84,70 @@ export function fromDiagnosisRecord(record: StoredDiagnosis): DiagnosisRecordDto
   };
 }
 
-function repairStoredAnswers(answers: QuizAnswers): QuizAnswers {
-  const repaired = { ...answers };
+const STORED_ANSWER_DEFAULTS = {
+  q1: "B",
+  q2: "B",
+  q3: "B",
+  q4: "B",
+  q5: "B",
+  q6: "B",
+  q7: "B",
+  q8: "B",
+  q9: "B",
+  q10: "B",
+  q11: "B",
+  q12: "B",
+  q13: "B",
+  q14: ["A"],
+  q15: "B",
+  q16: "A",
+  q17: "B",
+  q18: "B",
+  q19: ["A", "C"],
+  q20: "A",
+  q21: "A",
+  q22: "B",
+  q23: "A",
+  q24: "D",
+} satisfies Required<QuizAnswers>;
 
-  // v3 经营画像 q1-q10：全部是 4 选项单选，旧记录缺失或类型错误时补 B（偏左中间值）
-  for (const id of ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10"] as const) {
-    if (!repaired[id] || Array.isArray(repaired[id])) repaired[id] = "B";
+const questionById = new Map(quizQuestions.map((question) => [question.id, question]));
+
+function repairStoredAnswers(answers: QuizAnswers): QuizAnswers {
+  const repaired: QuizAnswers = isRecord(answers) ? { ...answers } : {};
+
+  for (const question of quizQuestions) {
+    repaired[question.id] = repairStoredAnswer(question.id, repaired[question.id]);
   }
 
-  // AI 落地画像单选题：默认值保持中间或保守值，避免误判落地阶段
-  if (!repaired.q11 || Array.isArray(repaired.q11)) repaired.q11 = "B"; // AI 态度：有兴趣
-  if (!repaired.q12 || Array.isArray(repaired.q12)) repaired.q12 = "B"; // 关注偏好：商业落地
-  if (!repaired.q13 || Array.isArray(repaired.q13)) repaired.q13 = "B"; // 使用时长：1-2h
-  // q14 是多选工具题，旧记录缺失时默认 [A]（基础聊天工具）
-  if (!repaired.q14 || !Array.isArray(repaired.q14)) repaired.q14 = ["A"];
-  if (!repaired.q15 || Array.isArray(repaired.q15)) repaired.q15 = "B"; // 工作流：个人临时
-  if (!repaired.q16 || Array.isArray(repaired.q16)) repaired.q16 = "A"; // AI 边界认知
-  if (!repaired.q17 || Array.isArray(repaired.q17)) repaired.q17 = "B"; // AI 参照系
-  if (!repaired.q18 || Array.isArray(repaired.q18)) repaired.q18 = "B"; // 人机协作
-  // q19 是多选认知宽度题，默认 [A, C] 给拓展认知计算时提供基础样本
-  if (!repaired.q19 || !Array.isArray(repaired.q19)) repaired.q19 = ["A", "C"];
-  if (!repaired.q20 || Array.isArray(repaired.q20)) repaired.q20 = "A"; // 刚需：重复执行
-  if (!repaired.q21 || Array.isArray(repaired.q21)) repaired.q21 = "A"; // 预期价值
-  if (!repaired.q22 || Array.isArray(repaired.q22)) repaired.q22 = "B"; // 落地偏好：模板复用
-  if (!repaired.q23 || Array.isArray(repaired.q23)) repaired.q23 = "A"; // 阻力：场景不清晰
-  if (!repaired.q24 || Array.isArray(repaired.q24)) repaired.q24 = "D"; // 深度诊断意愿：先试工具
-
   return repaired;
+}
+
+function repairStoredAnswer(questionId: QuestionId, answer: QuizAnswerValue | undefined): QuizAnswerValue {
+  const question = questionById.get(questionId);
+  const defaultAnswer = STORED_ANSWER_DEFAULTS[questionId];
+  if (!question) return defaultAnswer;
+
+  if (question.type === "multiple") {
+    const values = Array.isArray(answer)
+      ? answer.filter((value): value is QuizOptionValue => hasQuestionOption(questionId, value))
+      : [];
+    if (values.length === 0) return defaultAnswer;
+    // q14 的“还没有任何 AI 工具进入日常工作”和其他工具互斥，旧记录也要收敛成同一语义。
+    if (questionId === "q14" && values.includes("E")) return ["E"];
+    return [...new Set(values)];
+  }
+
+  if (typeof answer === "string" && hasQuestionOption(questionId, answer)) {
+    return answer;
+  }
+  return defaultAnswer;
+}
+
+function hasQuestionOption(questionId: QuestionId, value: string): value is QuizOptionValue {
+  return Boolean(questionById.get(questionId)?.options.some((option) => option.value === value));
+}
+
+function isRecord(value: unknown): value is QuizAnswers {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

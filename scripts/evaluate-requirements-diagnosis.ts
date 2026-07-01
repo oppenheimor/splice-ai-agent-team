@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { fromDiagnosisRecord } from "../lib/requirements-diagnosis/persistence";
 import { calculateDiagnosis } from "../lib/requirements-diagnosis/scoring";
 import type { DiagnosisResult, QuizAnswers, QuizOptionValue, QuestionId } from "../lib/requirements-diagnosis/types";
 
@@ -109,13 +110,14 @@ function main() {
   const adoptionStats = scanAdoptionStages(q12Combos, Q13_VALUES, q14Combos);
   const cognitionStats = scanCognitionWidth(q19Combos);
   const needStats = scanJustNeed(q20Combos);
+  const storageCompatibilityStats = scanStorageCompatibility();
   const edgeCases = buildEdgeCases();
   const goldenStats = scanGoldenCases();
   const representativeCases = buildRepresentativeCases(operatorCombos);
   const adoptionRepresentativeCases = buildAdoptionRepresentativeCases(q12Combos, Q13_VALUES, q14Combos);
   const allSamples = dedupeSamples([...representativeCases, ...adoptionRepresentativeCases, ...edgeCases]);
   const judgedSamples = allSamples.map((sample) => judgeSample(sample.name, sample.answers, calculateDiagnosis(sample.answers)));
-  const findings = buildFindings(judgedSamples, operatorStats, questionInfluenceStats, adoptionStats, cognitionStats, goldenStats);
+  const findings = buildFindings(judgedSamples, operatorStats, questionInfluenceStats, adoptionStats, cognitionStats, goldenStats, storageCompatibilityStats);
 
   writeReport({
     totalLogicalCombinations,
@@ -124,6 +126,7 @@ function main() {
     adoptionStats,
     cognitionStats,
     needStats,
+    storageCompatibilityStats,
     goldenStats,
     q14Combos,
     q19Combos,
@@ -273,6 +276,49 @@ function scanGoldenCases() {
   });
 }
 
+function scanStorageCompatibility() {
+  const legacyAnswers: QuizAnswers = {
+    ...BASE_ANSWERS,
+    q1: "E",
+    q2: "E",
+    q3: "E",
+    q10: ["A", "D"],
+    q14: "E",
+    q19: "E",
+  };
+  const record = fromDiagnosisRecord({
+    id: "legacy-record",
+    answers: legacyAnswers,
+    dimensionScores: {},
+    operatorCode: "legacy",
+    operatorTypeName: "legacy",
+    aiAdoptionStage: "legacy",
+    userType: "business",
+    cognitiveWidth: "legacy",
+    blindSpots: [],
+    justNeed: "legacy",
+    crowdType: "legacy",
+    enhancedNarrative: null,
+    createdAt: new Date("2026-06-30T00:00:00.000Z"),
+    updatedAt: new Date("2026-06-30T00:00:00.000Z"),
+    chatSession: null,
+  });
+  const repaired = record.result.answers;
+  const issues = [
+    repaired.q1 === "B" ? null : `q1 旧值 E 未修复，实际 ${String(repaired.q1)}`,
+    repaired.q2 === "B" ? null : `q2 旧值 E 未修复，实际 ${String(repaired.q2)}`,
+    repaired.q3 === "B" ? null : `q3 旧值 E 未修复，实际 ${String(repaired.q3)}`,
+    repaired.q10 === "B" ? null : `q10 旧数组未修复，实际 ${Array.isArray(repaired.q10) ? repaired.q10.join("") : String(repaired.q10)}`,
+    Array.isArray(repaired.q14) && repaired.q14.join("") === "A" ? null : `q14 非数组旧值未修复，实际 ${Array.isArray(repaired.q14) ? repaired.q14.join("") : String(repaired.q14)}`,
+    Array.isArray(repaired.q19) && repaired.q19.join("") === "AC" ? null : `q19 非数组旧值未修复，实际 ${Array.isArray(repaired.q19) ? repaired.q19.join("") : String(repaired.q19)}`,
+  ].filter((issue): issue is string => Boolean(issue));
+
+  return {
+    total: 1,
+    issues,
+  };
+}
+
 function buildRepresentativeCases(combos: Array<Record<string, QuizOptionValue>>) {
   const byType = new Map<string, Array<{ answers: Required<QuizAnswers>; result: DiagnosisResult }>>();
   for (const combo of combos) {
@@ -387,6 +433,7 @@ function buildFindings(
   adoptionStats: ReturnType<typeof scanAdoptionStages>,
   cognitionStats: ReturnType<typeof scanCognitionWidth>,
   goldenStats: ReturnType<typeof scanGoldenCases>,
+  storageCompatibilityStats: ReturnType<typeof scanStorageCompatibility>,
 ) {
   const findings: string[] = [];
   const goldenFailures = goldenStats.filter((item) => item.issues.length > 0);
@@ -394,6 +441,11 @@ function buildFindings(
     findings.push(`Golden Set 回归通过：${goldenStats.length} 个关键画像样本均符合预期。`);
   } else {
     findings.push(`Golden Set 回归发现 ${goldenFailures.length} 个失败样本，需要先修正再继续优化规则。`);
+  }
+  if (storageCompatibilityStats.issues.length === 0) {
+    findings.push("旧记录兼容回归通过：过期选项值和旧题型数据会在读取时修复为 v3 合法答案。");
+  } else {
+    findings.push(`旧记录兼容回归失败：${storageCompatibilityStats.issues.join("；")}`);
   }
   if (operatorStats.invariantIssues.length === 0) {
     findings.push("经营类型硬规则通过：11 种类型均可达，平衡统筹型只在无显著维度偏差时出现。");
@@ -425,6 +477,7 @@ function writeReport(input: {
   adoptionStats: ReturnType<typeof scanAdoptionStages>;
   cognitionStats: ReturnType<typeof scanCognitionWidth>;
   needStats: ReturnType<typeof scanJustNeed>;
+  storageCompatibilityStats: ReturnType<typeof scanStorageCompatibility>;
   goldenStats: ReturnType<typeof scanGoldenCases>;
   q14Combos: QuizOptionValue[][];
   q19Combos: QuizOptionValue[][];
@@ -450,6 +503,7 @@ function writeReport(input: {
     `- Q19 认知宽度穷举：${input.cognitionStats.total} 组。`,
     `- Q20 刚需方向穷举：${input.needStats.total} 组。`,
     `- Golden Set 回归：${input.goldenStats.length} 个关键样本。`,
+    `- 旧记录兼容回归：${input.storageCompatibilityStats.total} 个迁移样本。`,
     `- 代表样本审查：${input.judgedSamples.length} 份。`,
     "",
     "## 硬规则体检",
