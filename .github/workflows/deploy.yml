@@ -32,31 +32,12 @@ jobs:
       # ── 3. 构建 & 推送 ──
       - name: Build & Push
         run: |
-          set -euo pipefail
-
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          CACHE_IMAGE="${IMAGE}:buildcache"
-
-          # 当前 self-hosted runner 没有 buildx 插件，使用经典 builder 的阶段镜像做缓存源。
-          docker pull "${CACHE_IMAGE}" || true
-          docker pull "${IMAGE}:latest" || true
-
-          DOCKER_BUILDKIT=0 docker build \
-            --target builder \
-            --cache-from "${CACHE_IMAGE}" \
-            --cache-from "${IMAGE}:latest" \
-            -t "${CACHE_IMAGE}" \
+          docker build \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
             .
-          docker push "${CACHE_IMAGE}"
-
-          DOCKER_BUILDKIT=0 docker build \
-            --cache-from "${CACHE_IMAGE}" \
-            --cache-from "${IMAGE}:latest" \
-            -t "${IMAGE}:${{ env.SHORT_SHA }}" \
-            -t "${IMAGE}:latest" \
-            .
-          docker push "${IMAGE}:${{ env.SHORT_SHA }}"
-          docker push "${IMAGE}:latest"
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
       # ── 4. 准备 SSH ──
       - name: Prepare SSH key
@@ -82,10 +63,8 @@ jobs:
             mkdir -p /home/deploy/agent-team
             cat > /home/deploy/agent-team/.env <<EOL
           DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY_PRODUCTION }}
-          DEEPSEEK_MODEL=${{ secrets.DEEPSEEK_MODEL_PRODUCTION }}
           DATABASE_URL=${{ secrets.DATABASE_URL_PRODUCTION }}
           TAVILY_API_KEY=${{ secrets.TAVILY_API_KEY }}
-          CREDIT_ADMIN_USERNAMES=${{ secrets.CREDIT_ADMIN_USERNAMES }}
           EOL
           EOF
 
