@@ -1,0 +1,32 @@
+{
+  "prompt": "Design two soft flat 2D UI mascot candidates for a Deep Diagnosis AI Agent, square 1024x1024 transparent PNG. The mascot will sit just above a rounded chat input box in a minimal black-white-gray SaaS page. Show only the top half of a small gentle robot peeking over an invisible white input-card edge: head, tiny hands gripping the edge, maybe shoulders barely visible. Make it soft, quiet, warm, and curious, with rounded blob-like hands, a glossy but flat dark face panel, two simple teal eyes or one small teal spark, no complex fingers, no hard mechanical joints, no big body. Match the page tone: off-white shell, graphite outline, restrained emerald-teal accent, subtle soft shadow only under the character if needed. It should feel like a product UI companion, not a toy render and not a medical logo. Do not copy WorkBuddy: no cat ears, no animal ears, no tail, no exact face shape, no turquoise floating logo. No 3D, no clay render, no realistic lighting, no busy details, no text, no watermark, no checkerboard background.",
+  "original_prompt": "Design two soft flat 2D UI mascot candidates for a Deep Diagnosis AI Agent, square 1024x1024 transparent PNG. The mascot will sit just above a rounded chat input box in a minimal black-white-gray SaaS page. Show only the top half of a small gentle robot peeking over an invisible white input-card edge: head, tiny hands gripping the edge, maybe shoulders barely visible. Make it soft, quiet, warm, and curious, with rounded blob-like hands, a glossy but flat dark face panel, two simple teal eyes or one small teal spark, no complex fingers, no hard mechanical joints, no big body. Match the page tone: off-white shell, graphite outline, restrained emerald-teal accent, subtle soft shadow only under the character if needed. It should feel like a product UI companion, not a toy render and not a medical logo. Do not copy WorkBuddy: no cat ears, no animal ears, no tail, no exact face shape, no turquoise floating logo. No 3D, no clay render, no realistic lighting, no busy details, no text, no watermark, no checkerboard background.",
+  "model": "gpt-image-2",
+  "mode": "text-to-image",
+  "size": "1024x1024",
+  "output_format": "png",
+  "count": "2",
+  "stream": false,
+  "async": true,
+  "task_id": "d1da4a88bdf14afca43c3434d955e2ce",
+  "generation_time": 104.465,
+  "image_count": 2,
+  "optimize": false,
+  "detected_style": null,
+  "images": [
+    {
+      "url": "https://file.302.ai/gpt/imgs/20260622/84298cd9a4ca80d736c5bfc61f050ffd.png",
+      "file_name": "gpt_image_1782134329_1.png",
+      "download_success": true,
+      "download_error": null,
+      "index": 1
+    },
+    {
+      "url": "https://file.302.ai/gpt/imgs/20260622/bffd04dbfba5645c818c7ce8a345f691.png",
+      "file_name": "gpt_image_1782134329_2.png",
+      "download_success": true,
+      "download_error": null,
+      "index": 2
+    }
+  ]
+}

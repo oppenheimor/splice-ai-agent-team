@@ -135,7 +135,11 @@ export const aguiTools = {
       properties: {
         title: { type: "string" },
         description: { type: "string" },
-        layout: { type: "string", enum: ["compact", "comparison", "product", "plan"] },
+        variant: { type: "string", enum: ["recommendation", "comparison", "insight", "task", "resource"] },
+        density: { type: "string", enum: ["compact", "normal", "detailed"] },
+        emphasis: { type: "string", enum: ["none", "first", "scored", "selected"] },
+        layout: { type: "string", enum: ["grid", "list", "matrix", "compact", "comparison", "product", "plan"] },
+        metricsDisplay: { type: "string", enum: ["pills", "rows", "bars", "table"] },
         cards: { type: "array", items: cardSchema, minItems: 1, maxItems: 6 },
       },
       required: ["title", "cards"],
@@ -426,12 +430,18 @@ export function buildAguiPrompt(): string {
     "1. 文本负责承接、解释和总结；结构化对象交给工具。",
     "2. 需要选择时，不要在正文里写「A... B... C...」；应调用 askUserChoice，并把选项放进 options 字段。",
     "3. 工具调用后可以补一句说明，但不要重复展示同一组选项。",
-    "4. 工具数据必须简洁、可渲染、字段稳定；不要编造外部事实、价格、销量或实时数据。",
-    "5. 不要编造真实商品链接或店铺链接；没有验证过的购买入口只能给搜索关键词和通用搜索链接。",
+    "4. askUserChoice 的 option.label 必须是用户能直接选择的真实选项标题，禁止写「选项 1」「选项 2」「option 1」这类占位标题；如果只有一句说明，就把这句话放进 label，不要塞进 description。",
+    "5. 工具数据必须简洁、可渲染、字段稳定；不要编造外部事实、价格、销量或实时数据。",
+    "6. 不要编造真实商品链接或店铺链接；没有验证过的购买入口只能给搜索关键词和通用搜索链接。",
   ].join("\n");
 }
 
 type CardsInput = {
+  layout?: unknown;
+  variant?: unknown;
+  density?: unknown;
+  emphasis?: unknown;
+  metricsDisplay?: unknown;
   cards?: Array<Record<string, unknown> & { metrics?: unknown[]; bullets?: unknown[]; actions?: unknown[] }>;
 };
 
@@ -453,6 +463,11 @@ type GiftListInput = {
 function normalizeCards(input: CardsInput) {
   return {
     ...input,
+    variant: normalizeEnum(input.variant, ["recommendation", "comparison", "insight", "task", "resource"]),
+    density: normalizeEnum(input.density, ["compact", "normal", "detailed"]),
+    emphasis: normalizeEnum(input.emphasis, ["none", "first", "scored", "selected"]),
+    layout: normalizeEnum(input.layout, ["grid", "list", "matrix", "compact", "comparison", "product", "plan"]),
+    metricsDisplay: normalizeEnum(input.metricsDisplay, ["pills", "rows", "bars", "table"]),
     cards: (input.cards || []).map((card) => ({
       ...card,
       metrics: card.metrics || [],
@@ -460,6 +475,10 @@ function normalizeCards(input: CardsInput) {
       actions: card.actions || [],
     })),
   };
+}
+
+function normalizeEnum(value: unknown, allowed: string[]) {
+  return typeof value === "string" && allowed.includes(value) ? value : undefined;
 }
 
 function normalizeChart(input: ChartInput) {

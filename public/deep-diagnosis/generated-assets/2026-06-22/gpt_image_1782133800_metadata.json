@@ -1,0 +1,25 @@
+{
+  "prompt": "Create a flat vector logo mark for a Deep Diagnosis AI Agent, square 1024x1024. It should feel like a real SaaS product logo, not a character portrait. Use a simple geometric symbol: a minimal rounded robot face merged with a diagnostic scan waveform and small circuit/brain nodes. Flat 2D design, clean thick shapes, high readability at 24px, graphite black and teal accent with warm off-white negative space. No 3D, no clay render, no realistic lighting, no shadows, no texture, no gradients, no full robot body, no animal features, no cat ears, no resemblance to WorkBuddy. Transparent alpha background; do not draw a checkerboard pattern; no text, no letters, no watermark.",
+  "original_prompt": "Create a flat vector logo mark for a Deep Diagnosis AI Agent, square 1024x1024. It should feel like a real SaaS product logo, not a character portrait. Use a simple geometric symbol: a minimal rounded robot face merged with a diagnostic scan waveform and small circuit/brain nodes. Flat 2D design, clean thick shapes, high readability at 24px, graphite black and teal accent with warm off-white negative space. No 3D, no clay render, no realistic lighting, no shadows, no texture, no gradients, no full robot body, no animal features, no cat ears, no resemblance to WorkBuddy. Transparent alpha background; do not draw a checkerboard pattern; no text, no letters, no watermark.",
+  "model": "gpt-image-2",
+  "mode": "text-to-image",
+  "size": "1024x1024",
+  "output_format": "png",
+  "count": "1",
+  "stream": false,
+  "async": true,
+  "task_id": "d11b2eb92c12424cb1e9ff40718e4268",
+  "generation_time": 130.902,
+  "image_count": 1,
+  "optimize": false,
+  "detected_style": null,
+  "images": [
+    {
+      "url": "https://file.302.ai/gpt/imgs/20260622/6be524eeb97b566e6058c55268aff3c4.png",
+      "file_name": "gpt_image_1782133800_1.png",
+      "download_success": true,
+      "download_error": null,
+      "index": 1
+    }
+  ]
+}

@@ -149,5 +149,5 @@ export type DiagnosisResult = {
     description: string;
     hook: string;
   };
-  narrative: DiagnosisNarrative;
+  narrative: DiagnosisNarrative | null;
 };

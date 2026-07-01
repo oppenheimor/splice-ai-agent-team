@@ -1,14 +1,15 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, Bot, ClipboardCheck, MessageSquareText, SearchCheck, Send, Square, SquareUserRound } from "lucide-react";
+import { Bot, Send, Square, SquareUserRound } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import type { AgentManifest } from "@/lib/agent-team/agents/types";
 import { useAgentChat } from "@/lib/agent-team/chat/useAgentChat";
+import { useCreditBalance } from "@/lib/credits/useCreditBalance";
 import type { DiagnosisRecordDto } from "@/lib/requirements-diagnosis/persistence";
 import { MessagePartsRenderer } from "@/components/agent-chat/MessagePartsRenderer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { CreditBalancePill, CreditErrorNotice, CreditSettingsButton } from "@/components/credits/CreditStatus";
 import { cn } from "@/lib/utils";
 import {
   diagnosisAppSurface,
@@ -20,23 +21,25 @@ import {
   diagnosisPanel,
   diagnosisPrimaryButton,
   diagnosisSecondaryButton,
-  diagnosisSerif,
   diagnosisStage,
   diagnosisShell,
 } from "@/components/requirements-diagnosis/styles";
 
-type DiagnosisChatShellProps = {
+interface IDiagnosisChatShellProps {
   agent: AgentManifest;
-  diagnosis: DiagnosisRecordDto;
+  conversationId: string;
+  sourceDiagnosis?: DiagnosisRecordDto | null;
 };
 
-export function DiagnosisChatShell({ agent, diagnosis }: DiagnosisChatShellProps) {
-  const requestBody = useMemo(() => ({ quizResultId: diagnosis.id }), [diagnosis.id]);
+export function DiagnosisChatShell({ agent, conversationId, sourceDiagnosis }: IDiagnosisChatShellProps) {
+  const diagnosis = sourceDiagnosis;
+  const requestBody = useMemo(() => (diagnosis ? { quizResultId: diagnosis.id } : undefined), [diagnosis]);
   const chat = useAgentChat(agent, {
     // 需求诊断的对话必须与评测结果一一绑定，避免复用同一 Agent 的历史本地会话导致 DB conversationId 唯一键冲突。
-    conversationId: diagnosis.chatSession?.conversationId || `diagnosis-${diagnosis.id}`,
+    conversationId: diagnosis?.chatSession?.conversationId || conversationId,
     requestBody,
   });
+  const credit = useCreditBalance();
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -46,27 +49,12 @@ export function DiagnosisChatShell({ agent, diagnosis }: DiagnosisChatShellProps
   return (
     <main className={diagnosisShell}>
       <section className={diagnosisStage}>
+        <header className="flex items-center justify-end gap-2 py-4">
+          <CreditBalancePill credit={credit} compact />
+          <CreditSettingsButton className="bg-[#f0f0ed]" />
+        </header>
         <article className={`${diagnosisAppSurface} overflow-hidden`}>
           <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
-            <header>
-              <Link href="/requirements-diagnosis/history" className={diagnosisIconButton} aria-label="返回评测历史">
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-              <div className="text-center">
-                <strong className={`block text-lg leading-tight ${diagnosisSerif}`}>{agent.name}</strong>
-                <small className={diagnosisMutedText}>{diagnosis.result.operatorTypeName}</small>
-              </div>
-              <Link href={`/requirements-diagnosis/result?id=${diagnosis.id}`} className={diagnosisIconButton} aria-label="查看完整报告">
-                <MessageSquareText className="h-4 w-4" />
-              </Link>
-            </header>
-
-            <div className={`${diagnosisPanel} mt-5 grid gap-3 p-4 shadow-none lg:grid-cols-3`}>
-              <MetricLine label="AI 落地阶段" value={`${diagnosis.result.aiAdoptionStage} · ${diagnosis.result.aiAdoptionStageLabel}`} />
-              <MetricLine label="关注偏好" value={diagnosis.result.userTypeLabel} />
-              <MetricLine label="刚需方向" value={diagnosis.result.justNeedLabel} />
-            </div>
-
             <section className="mt-6 min-h-0 space-y-4 overflow-auto pr-1">
               {chat.messages.length === 0 ? (
                 <EmptyState diagnosis={diagnosis} onStart={chat.sendText} />
@@ -76,6 +64,7 @@ export function DiagnosisChatShell({ agent, diagnosis }: DiagnosisChatShellProps
                     <ChatMessage key={message.id} message={message} addToolOutput={chat.addToolOutput} />
                   ))}
                   {chat.isBusy ? <div className={`${diagnosisPanel} px-4 py-3 text-sm ${diagnosisMutedText}`}>正在整理诊断建议...</div> : null}
+                  <CreditErrorNotice error={chat.error} />
                   <div ref={endRef} />
                 </div>
               )}
@@ -107,7 +96,7 @@ export function DiagnosisChatShell({ agent, diagnosis }: DiagnosisChatShellProps
                     <Square className="h-4 w-4 fill-current" />
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={!chat.input.trim()} className={`h-12 w-12 p-0 ${diagnosisPrimaryButton}`} aria-label="发送">
+                  <Button type="submit" disabled={!chat.input.trim()} className={`h-12 w-12 p-0 cursor-pointer ${diagnosisPrimaryButton}`} aria-label="发送">
                     <Send className="h-4 w-4" />
                   </Button>
                 )}
@@ -151,18 +140,28 @@ function ChatMessage({
   );
 }
 
-function EmptyState({ diagnosis, onStart }: { diagnosis: DiagnosisRecordDto; onStart: (text: string) => void }) {
-  const prompts = [
-    "结合我的诊断结果，帮我找出最适合先做 AI 改造的业务环节。",
-    "帮我做一份本月可执行的企业 AI 转型路线图。",
-    "请评估我现在做 AI 自动化项目的风险和优先级。",
+function EmptyState({ diagnosis, onStart }: { diagnosis?: DiagnosisRecordDto | null; onStart: (text: string) => void }) {
+  const prompts = diagnosis ? [
+    "基于我的诊断结果，直接帮我判断：现在最值得先做的 AI 改造切入点是哪一个？",
+    "帮我把诊断结果落成一份 7 / 30 / 90 天执行计划，先从本月能动的事开始。",
+    "请帮我判断哪些 AI 想法值得做、哪些先别做，避免我花冤枉钱。",
+  ] : [
+    "我还没想清楚从哪里开始，请通过几个问题帮我找出最值得 AI 改造的业务环节。",
+    "帮我判断我的业务里有没有适合 AI 落地的场景，并给出第一步建议。",
+    "我有一个 AI 自动化想法，帮我评估它值不值得做、风险在哪里。",
   ];
 
   return (
     <div>
-      <Message role="assistant">
-        我已经读到你的诊断结果：{diagnosis.result.operatorTypeName}。先定位一个最值得改造的业务环节。
-      </Message>
+      {diagnosis ? (
+        <Message role="assistant">
+          我已经读到你的诊断结果：{diagnosis.result.operatorTypeName}。先定位一个最值得改造的业务环节。
+        </Message>
+      ) : (
+        <Message role="assistant">
+          你可以直接从业务现场开始，我会先追问关键背景，再把可落地的 AI 改造路径收束出来。
+        </Message>
+      )}
       <div className="mt-4 grid gap-3">
         {prompts.map((prompt) => (
           <button key={prompt} type="button" onClick={() => onStart(prompt)} className={`${diagnosisMetric} text-left text-sm font-bold transition hover:bg-[#e8e8e4]`}>
@@ -170,16 +169,9 @@ function EmptyState({ diagnosis, onStart }: { diagnosis: DiagnosisRecordDto; onS
           </button>
         ))}
       </div>
-      <div className={`mt-4 p-4 ${diagnosisPanel}`}>
-        <div className="flex items-center gap-2">
-          <SearchCheck className="h-4 w-4 text-[#2e2f2d]" />
-          <strong className="text-sm">结构化判断</strong>
-        </div>
-        <div className="mt-3 grid gap-2">
-          <WorkspaceItem icon={<MessageSquareText className="h-4 w-4" />} title="待确认问题" desc="把追问从聊天流里提炼出来" />
-          <WorkspaceItem icon={<ClipboardCheck className="h-4 w-4" />} title="行动清单" desc="沉淀本周、本月、持续动作" />
-        </div>
-      </div>
+      <p className={`mt-3 px-1 text-xs ${diagnosisMutedText}`}>
+        也可以直接输入你的行业、岗位、流程痛点或一个 AI 想法，我会先帮你判断是否值得做。
+      </p>
     </div>
   );
 }
@@ -207,14 +199,5 @@ function WorkspaceItem({ icon, title, desc }: { icon: React.ReactNode; title: st
         <small className={diagnosisMutedText}>{desc}</small>
       </span>
     </div>
-  );
-}
-
-function MetricLine({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="flex justify-between gap-3 text-sm">
-      <b>{label}</b>
-      <em className={diagnosisMutedText}>{value}</em>
-    </span>
   );
 }

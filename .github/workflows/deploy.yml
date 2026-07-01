@@ -64,6 +64,7 @@ jobs:
             cat > /home/deploy/agent-team/.env <<EOL
           DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY_PRODUCTION }}
           DATABASE_URL=${{ secrets.DATABASE_URL_PRODUCTION }}
+          TAVILY_API_KEY=${{ secrets.TAVILY_API_KEY }}
           EOL
           EOF
 

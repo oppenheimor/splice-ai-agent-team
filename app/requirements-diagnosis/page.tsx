@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, History } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,6 @@ import {
   diagnosisMetric,
   diagnosisMutedText,
   diagnosisPrimaryButton,
-  diagnosisSecondaryButton,
   diagnosisStage,
   diagnosisShell,
 } from "@/components/requirements-diagnosis/styles";
@@ -69,17 +68,6 @@ export default async function RequirementsDiagnosisPage() {
                 <Link href="/requirements-diagnosis/quiz">
                   开始评测
                   <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className={`h-12 text-sm font-bold ${diagnosisSecondaryButton}`}
-              >
-                <Link href="/requirements-diagnosis/history">
-                  <History className="h-4 w-4" />
-                  查看历史
                 </Link>
               </Button>
             </div>

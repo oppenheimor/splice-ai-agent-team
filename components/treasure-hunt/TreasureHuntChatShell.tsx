@@ -12,7 +12,9 @@ import { useTreasureAnalytics } from "@/lib/analytics/useTreasureAnalytics";
 import type { AgentConversation, AgentManifest } from "@/lib/agent-team/agents/types";
 import { useAgentChat } from "@/lib/agent-team/chat/useAgentChat";
 import { popPendingPrompt } from "@/lib/agent-team/storage/pending-prompts";
+import { useCreditBalance } from "@/lib/credits/useCreditBalance";
 import { cn } from "@/lib/utils";
+import { CreditBalancePill, CreditErrorNotice, CreditSettingsIconLink } from "@/components/credits/CreditStatus";
 import {
   TreasureHuntConversationList,
   TreasureHuntHistoryButton,
@@ -42,6 +44,7 @@ export function TreasureHuntChatShell({
   const router = useRouter();
   useTreasureAnalytics(conversationId);
   const chat = useAgentChat(agent, { conversationId });
+  const credit = useCreditBalance();
   const endRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLElement | null>(null);
   const shouldStickToBottomRef = useRef(true);
@@ -91,9 +94,9 @@ export function TreasureHuntChatShell({
     router.push(`/treasure/hunt/chat/${conversation.id}`);
   }
 
-  function deleteConversation(conversationIdToDelete: string) {
+  async function deleteConversation(conversationIdToDelete: string) {
     const deletingActive = chat.activeConversation?.id === conversationIdToDelete;
-    const next = chat.removeConversation(conversationIdToDelete);
+    const next = await chat.removeConversation(conversationIdToDelete);
     if (!deletingActive) return;
     setHistoryOpen(false);
     if (next) {
@@ -120,6 +123,12 @@ export function TreasureHuntChatShell({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <CreditBalancePill
+              credit={credit}
+              compact
+              className="border-2 border-[#c4b89e] bg-[#fff8df] font-black text-[#725d42] shadow-[0_3px_0_#d8c8a2] hover:bg-[#fff8df]"
+            />
+            <CreditSettingsIconLink className="border-2 border-[#c4b89e] bg-[#fff8df] text-[#725d42] shadow-[0_3px_0_#d8c8a2] hover:bg-[#fff8df]" />
             <TreasureHuntHistoryButton
               className={treasureIconButton}
               ariaLabel={historyOpen ? "收起会话历史" : "展开会话历史"}
@@ -274,11 +283,7 @@ export function TreasureHuntChatShell({
                       </IslandCard>
                     </div>
                   ) : null}
-                  {chat.error ? (
-                    <div className="text-sm font-black text-[#e05a5a] sm:ml-14">
-                      {chat.error.message}
-                    </div>
-                  ) : null}
+                  <CreditErrorNotice error={chat.error} className="border-2 border-[#f8a6b2] bg-[#fff8df] font-black text-[#743848] shadow-[0_4px_0_rgba(116,56,72,0.14)] sm:ml-14" />
                   <div ref={endRef} />
                 </div>
               </div>

@@ -5,8 +5,6 @@ import {
   BarChart3,
   Bot,
   Check,
-  FileText,
-  History,
   MessageSquareText,
   SearchCheck,
   Send,
@@ -15,11 +13,11 @@ import {
 import { quizQuestions } from "@/lib/requirements-diagnosis/quiz";
 import type { DimensionScore } from "@/lib/requirements-diagnosis/types";
 import type { DiagnosisDemoStyle } from "./demo-data";
-import { demoHistory, demoResult } from "./demo-data";
+import { demoResult } from "./demo-data";
 
 type DiagnosisDemoWallProps = {
   style: DiagnosisDemoStyle;
-  page: "home" | "quiz" | "result" | "history" | "chat";
+  page: "home" | "quiz" | "result" | "chat";
 };
 
 const styleLinks = [
@@ -73,7 +71,6 @@ function DesktopBrief({ style, page }: { style: DiagnosisDemoStyle; page: Diagno
           ["首页", style.basePath],
           ["问卷", `${style.basePath}/quiz`],
           ["结果", `${style.basePath}/result`],
-          ["历史", `${style.basePath}/history`],
           ["Chat", `${style.basePath}/chat/demo-record-1`],
         ].map(([label, href]) => (
           <Link key={href} href={href} className={`px-4 py-2 text-sm font-semibold transition ${style.secondaryButton}`}>
@@ -121,7 +118,6 @@ function StatusBar() {
 function PhoneScreen({ style, page }: { style: DiagnosisDemoStyle; page: DiagnosisDemoWallProps["page"] }) {
   if (page === "quiz") return <QuizScreen style={style} />;
   if (page === "result") return <ResultScreen style={style} />;
-  if (page === "history") return <HistoryScreen style={style} />;
   if (page === "chat") return <ChatScreen style={style} />;
   return <HomeScreen style={style} />;
 }
@@ -175,10 +171,6 @@ function HomeScreen({ style }: { style: DiagnosisDemoStyle }) {
         <Link href={`${style.basePath}/quiz`} className={`flex h-14 items-center justify-center gap-2 text-sm font-bold ${style.primaryButton}`}>
           开始评测
           <ArrowRight className="h-4 w-4" />
-        </Link>
-        <Link href={`${style.basePath}/history`} className={`flex h-12 items-center justify-center gap-2 text-sm font-bold ${style.secondaryButton}`}>
-          <History className="h-4 w-4" />
-          查看历史
         </Link>
       </div>
     </div>
@@ -242,44 +234,12 @@ function ResultScreen({ style }: { style: DiagnosisDemoStyle }) {
       </div>
       <div className={`mt-5 p-4 ${style.metric}`}>
         <strong className="block text-sm">本周动作</strong>
-        <p className={`mt-2 text-sm leading-6 ${style.muted}`}>{demoResult.narrative.actionPlan.week}</p>
+        <p className={`mt-2 text-sm leading-6 ${style.muted}`}>{demoResult.narrative?.actionPlan.week || "叙事尚未生成"}</p>
       </div>
       <div className="mt-auto">
         <Link href={`${style.basePath}/chat/demo-record-1`} className={`flex h-14 items-center justify-center gap-2 text-sm font-bold ${style.primaryButton}`}>
           深度诊断
           <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-    </ScreenScaffold>
-  );
-}
-
-function HistoryScreen({ style }: { style: DiagnosisDemoStyle }) {
-  return (
-    <ScreenScaffold style={style} eyebrow="History" title="诊断记录">
-      <div className="mt-8 grid gap-4">
-        {demoHistory.map((record) => (
-          <Link key={record.id} href={`${style.basePath}/chat/${record.id}`} className={`block p-4 ${style.surface}`}>
-            <div className="flex items-center justify-between gap-3">
-              <span className={style.badge}>{record.result.aiAdoptionStage}</span>
-              <span className={`text-xs ${style.muted}`}>{record.messageCount} 条消息</span>
-            </div>
-            <h3 className={`mt-4 text-xl font-black ${style.strong}`}>{record.result.operatorTypeName}</h3>
-            <p className={`mt-2 line-clamp-2 text-sm leading-6 ${style.muted}`}>{record.result.operatorTypeDefinition}</p>
-            <div className="mt-4 flex items-center justify-between text-sm font-bold" style={{ color: style.accent }}>
-              <span>继续深度诊断</span>
-              <ArrowRight className="h-4 w-4" />
-            </div>
-          </Link>
-        ))}
-      </div>
-      <div className="mt-auto grid grid-cols-2 gap-3">
-        <Link href={`${style.basePath}/result`} className={`flex h-12 items-center justify-center gap-2 text-sm font-bold ${style.secondaryButton}`}>
-          <FileText className="h-4 w-4" />
-          结果
-        </Link>
-        <Link href={`${style.basePath}/quiz`} className={`flex h-12 items-center justify-center gap-2 text-sm font-bold ${style.primaryButton}`}>
-          重新评测
         </Link>
       </div>
     </ScreenScaffold>

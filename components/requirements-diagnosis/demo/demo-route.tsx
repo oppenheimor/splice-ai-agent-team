@@ -19,16 +19,14 @@ export function generateDemoStaticParams() {
     {},
     { demoPath: ["quiz"] },
     { demoPath: ["result"] },
-    { demoPath: ["history"] },
     { demoPath: ["chat", "demo-record-1"] },
   ];
 }
 
-function resolveDemoPage(demoPath: string[]): "home" | "quiz" | "result" | "history" | "chat" | null {
+function resolveDemoPage(demoPath: string[]): "home" | "quiz" | "result" | "chat" | null {
   if (demoPath.length === 0) return "home";
   if (demoPath.length === 1 && demoPath[0] === "quiz") return "quiz";
   if (demoPath.length === 1 && demoPath[0] === "result") return "result";
-  if (demoPath.length === 1 && demoPath[0] === "history") return "history";
   if (demoPath.length === 2 && demoPath[0] === "chat") return "chat";
   return null;
 }

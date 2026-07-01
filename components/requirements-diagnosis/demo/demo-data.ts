@@ -259,37 +259,6 @@ export const demoResult: DiagnosisResult = {
   },
 };
 
-export const demoHistory = [
-  {
-    id: "demo-record-1",
-    createdAt: "2026-05-28T09:30:00.000Z",
-    result: demoResult,
-    chatStatus: "active",
-    messageCount: 8,
-  },
-  {
-    id: "demo-record-2",
-    createdAt: "2026-05-21T15:12:00.000Z",
-    result: {
-      ...demoResult,
-      operatorCode: "S-EP",
-      operatorTypeName: "风险防守型",
-      operatorTypeDefinition: "关注稳定和边界，适合低风险场景、权限清晰、可控试点。",
-      operatorType: {
-        code: "S",
-        name: "风险防守型",
-        definition: "关注稳定和边界，适合低风险场景、权限清晰、可控试点。",
-        primaryTrait: "风险防守",
-        secondaryTrait: null,
-      },
-      aiAdoptionStage: "L3",
-      aiAdoptionStageLabel: "单点应用层",
-    },
-    chatStatus: "archived",
-    messageCount: 4,
-  },
-];
-
 export function getDemoStyle(styleId: string): DiagnosisDemoStyle | null {
   if (styleId in demoStyles) return demoStyles[styleId as DiagnosisDemoStyleId];
   return null;

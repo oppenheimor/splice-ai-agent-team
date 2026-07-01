@@ -1,0 +1,17 @@
+{
+  "prompt": "Create an original square transparent PNG app logo and chatbot avatar for a Deep Diagnosis AI Agent. Centered compact robot head icon, not a cat, not animal-like, no ears, no resemblance to WorkBuddy. Premium SaaS product logo, matte porcelain white and soft graphite shell, glossy black rounded face screen, calm teal diagnostic glow eyes, subtle brain-circuit node emblem integrated on forehead, tiny medical diagnostic waveform detail, soft 3D clay render with crisp silhouette, readable at 32px, friendly but professional, isolated on fully transparent background, no text, no letters, no watermark.",
+  "original_prompt": "Create an original square transparent PNG app logo and chatbot avatar for a Deep Diagnosis AI Agent. Centered compact robot head icon, not a cat, not animal-like, no ears, no resemblance to WorkBuddy. Premium SaaS product logo, matte porcelain white and soft graphite shell, glossy black rounded face screen, calm teal diagnostic glow eyes, subtle brain-circuit node emblem integrated on forehead, tiny medical diagnostic waveform detail, soft 3D clay render with crisp silhouette, readable at 32px, friendly but professional, isolated on fully transparent background, no text, no letters, no watermark.",
+  "model": "gpt-image-2",
+  "mode": "text-to-image",
+  "size": "1024x1024",
+  "output_format": "png",
+  "count": "1",
+  "stream": false,
+  "async": true,
+  "task_id": "a3dd55c00c154ebc98b57903f4433707",
+  "generation_time": 319.41,
+  "image_count": 0,
+  "optimize": false,
+  "detected_style": null,
+  "images": []
+}

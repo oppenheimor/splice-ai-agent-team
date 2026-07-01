@@ -18,11 +18,14 @@ export type RendererProfile = "default" | "treasure-hunt";
 
 export type PromptBuilderName =
   | "generic"
+  | "deepDiagnosis"
   | "treasureHunt"
   | "requirementsDiagnosis";
 
 /** 外部能力工具名称（区别于 AGUI 交互工具） */
-export type ExternalToolName = "webSearch"; // 未来可扩展：industryReport, competitorAnalysis 等
+export type ExternalToolName =
+  | "webSearch"
+  | "publishHtmlReport"; // 未来可扩展：industryReport, competitorAnalysis 等
 
 export type MemoryPolicy = {
   mode: "session" | "none";

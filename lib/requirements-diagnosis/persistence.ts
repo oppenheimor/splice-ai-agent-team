@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { calculateDiagnosis, mergeNarrative } from "./scoring";
 import type { DiagnosisNarrative, DiagnosisResult, QuizAnswers } from "./types";
 
@@ -48,7 +48,9 @@ export function toDiagnosisJson(result: DiagnosisResult) {
     blindSpots: result.blindSpots as Prisma.InputJsonValue,
     justNeed: result.justNeed,
     crowdType: result.crowdType,
-    enhancedNarrative: result.narrative as unknown as Prisma.InputJsonValue,
+    enhancedNarrative: result.narrative
+      ? result.narrative as unknown as Prisma.InputJsonValue
+      : Prisma.DbNull,
   };
 }
 

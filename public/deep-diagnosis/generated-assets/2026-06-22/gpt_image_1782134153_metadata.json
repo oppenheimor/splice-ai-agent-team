@@ -1,0 +1,32 @@
+{
+  "prompt": "Design two refined flat logo candidates for a Chinese web app named Deep Diagnosis AI Agent. Square 1024x1024 transparent PNG. The logo must match a quiet monochrome SaaS chat interface: lots of white space, black/graphite UI, one restrained emerald-teal accent. Make it feel like a small sidebar logo and chatbot avatar, readable at 20-32px. Use a compact circular badge or rounded-square badge with a very simple abstract diagnostic agent glyph: a tiny rounded robot face, a single calm eye/spark, and a subtle scan/insight mark. It should feel premium, calm, minimal, friendly, not medical-clinic, not a large mascot, not a circuit diagram, not an ECG logo, not a brain icon. Flat vector, clean geometry, no 3D, no realistic shading, no detailed antenna forest, no big waveform, no text, no Chinese characters, no letters, no watermark, no checkerboard background.",
+  "original_prompt": "Design two refined flat logo candidates for a Chinese web app named Deep Diagnosis AI Agent. Square 1024x1024 transparent PNG. The logo must match a quiet monochrome SaaS chat interface: lots of white space, black/graphite UI, one restrained emerald-teal accent. Make it feel like a small sidebar logo and chatbot avatar, readable at 20-32px. Use a compact circular badge or rounded-square badge with a very simple abstract diagnostic agent glyph: a tiny rounded robot face, a single calm eye/spark, and a subtle scan/insight mark. It should feel premium, calm, minimal, friendly, not medical-clinic, not a large mascot, not a circuit diagram, not an ECG logo, not a brain icon. Flat vector, clean geometry, no 3D, no realistic shading, no detailed antenna forest, no big waveform, no text, no Chinese characters, no letters, no watermark, no checkerboard background.",
+  "model": "gpt-image-2",
+  "mode": "text-to-image",
+  "size": "1024x1024",
+  "output_format": "png",
+  "count": "2",
+  "stream": false,
+  "async": true,
+  "task_id": "1a49a80674354846a12c7d3179e2b9e7",
+  "generation_time": 146.21,
+  "image_count": 2,
+  "optimize": false,
+  "detected_style": null,
+  "images": [
+    {
+      "url": "https://file.302.ai/gpt/imgs/20260622/3b46003098c009f5f58c660c31abca46.png",
+      "file_name": "gpt_image_1782134153_1.png",
+      "download_success": true,
+      "download_error": null,
+      "index": 1
+    },
+    {
+      "url": "https://file.302.ai/gpt/imgs/20260622/1d4efa3025003c827950d2e263f0194a.png",
+      "file_name": "gpt_image_1782134153_2.png",
+      "download_success": true,
+      "download_error": null,
+      "index": 2
+    }
+  ]
+}

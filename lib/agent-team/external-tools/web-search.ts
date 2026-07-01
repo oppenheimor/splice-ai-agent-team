@@ -1,4 +1,5 @@
 import { jsonSchema, tool } from "ai";
+import { compileWebSearchEvidence } from "@/lib/deep-diagnosis/evidence-compiler";
 
 type TavilyResult = {
   title?: string;
@@ -28,10 +29,15 @@ export const webSearchTool = tool({
     const apiKey = process.env.TAVILY_API_KEY;
 
     if (!apiKey) {
+      const warning = "服务端缺少 TAVILY_API_KEY，无法联网验证。请按 C 级推断处理。";
       return {
         answer: null,
         results: [],
-        warning: "服务端缺少 TAVILY_API_KEY，无法联网验证。请按 C 级推断处理。",
+        warning,
+        compiledEvidence: compileWebSearchEvidence({
+          searchedQuestions: [query],
+          output: { warning, results: [] },
+        }),
       };
     }
 
@@ -50,23 +56,36 @@ export const webSearchTool = tool({
     });
 
     if (!response.ok) {
+      const warning = `搜索失败：${response.status} ${response.statusText}`;
       return {
         answer: null,
         results: [],
-        warning: `搜索失败：${response.status} ${response.statusText}`,
+        warning,
+        compiledEvidence: compileWebSearchEvidence({
+          searchedQuestions: [query],
+          output: { warning, results: [] },
+        }),
       };
     }
 
     const data = (await response.json()) as TavilyResponse;
+    const results = (data.results || []).map((result) => ({
+      title: result.title || "未命名来源",
+      url: result.url || "",
+      content: result.content || "",
+      score: result.score,
+    }));
 
     return {
       answer: data.answer || null,
-      results: (data.results || []).map((result) => ({
-        title: result.title || "未命名来源",
-        url: result.url || "",
-        content: result.content || "",
-        score: result.score,
-      })),
+      results,
+      compiledEvidence: compileWebSearchEvidence({
+        searchedQuestions: [query],
+        output: {
+          answer: data.answer || null,
+          results,
+        },
+      }),
     };
   },
 });

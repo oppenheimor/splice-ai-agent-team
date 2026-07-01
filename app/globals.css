@@ -4,8 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: Avenir Next, Optima, ui-sans-serif, system-ui, sans-serif;
-  --font-mono: IBM Plex Mono, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: var(--font-geist-sans), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), IBM Plex Mono, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -84,7 +84,7 @@ body {
   min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
-  font-family: Avenir Next, Optima, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -103,4 +103,50 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+.deep-diagnosis-thinking-text {
+  color: #9a9a9a;
+}
+
+.deep-diagnosis-prompt-layer {
+  margin-top: var(--prompt-gap, 0);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .deep-diagnosis-thinking-text {
+    background-image: linear-gradient(110deg, #a6a6a6 0%, #a6a6a6 34%, #f8f8f8 48%, #d8d8d8 56%, #a6a6a6 70%, #a6a6a6 100%);
+    background-position: 120% 50%;
+    background-size: 240% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: deep-diagnosis-thinking-shimmer 2.4s ease-in-out infinite;
+  }
+
+  .deep-diagnosis-prompt-layer {
+    opacity: 0;
+    animation: deep-diagnosis-prompt-fade-in 420ms ease-out var(--prompt-delay, 0ms) both;
+  }
+}
+
+@keyframes deep-diagnosis-thinking-shimmer {
+  0% {
+    background-position: 120% 50%;
+  }
+
+  100% {
+    background-position: -120% 50%;
+  }
+}
+
+@keyframes deep-diagnosis-prompt-fade-in {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }

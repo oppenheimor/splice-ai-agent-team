@@ -4,6 +4,11 @@ import { fromDiagnosisRecord, toDiagnosisJson } from "@/lib/requirements-diagnos
 import { calculateDiagnosis } from "@/lib/requirements-diagnosis/scoring";
 import type { DiagnosisNarrative, QuizAnswers } from "@/lib/requirements-diagnosis/types";
 
+export type DiagnosisNarrativePatch =
+  | { type: "actionInsight"; index: number; text: string }
+  | { type: "actionPlan"; key: keyof DiagnosisNarrative["actionPlan"]; text: string }
+  | { type: "closing"; key: keyof DiagnosisNarrative["closing"]; text: string };
+
 export async function createDiagnosis(userId: string, answers: QuizAnswers | undefined) {
   if (!answers) {
     throw new Error("缺少问卷答案。");
@@ -51,9 +56,15 @@ export async function saveEnhancedNarrative(input: {
 export function buildNarrativeSystemPrompt(): string {
   return [
     "你是需求诊断报告的叙事增强器。",
-    "只输出 JSON，不要 Markdown，不要代码块。",
-    "JSON 结构必须是：",
-    '{"actionInsights":["五条，每条对应一个经营维度"],"actionPlan":{"week":"...","month":"...","ongoing":"..."},"closing":{"technology":"...","philosophy":"...","quote":"..."}}',
+    "只输出 JSONL，不要 Markdown，不要代码块，不要解释。",
+    "每一行必须是一个独立 JSON 对象，字段顺序按下面要求输出，方便前端逐段展示。",
+    "必须先连续输出 5 行 actionInsight，每行结构：",
+    '{"type":"actionInsight","index":0,"text":"第一条，对应第 1 个经营维度"}',
+    "index 必须从 0 到 4，分别对应输入里的五个经营维度。",
+    "然后输出 3 行 actionPlan，key 只能是 week、month、ongoing：",
+    '{"type":"actionPlan","key":"week","text":"..."}',
+    "最后输出 3 行 closing，key 只能是 technology、philosophy、quote：",
+    '{"type":"closing","key":"technology","text":"..."}',
     "要求：中文、专业、积极、克制。不要编造外部数据。",
     "每条 actionInsights 使用「数据陈述 -> 客观判断 -> 积极引导」的语气，结合该维度的主导倾向，给出能指导下一步行动的建议。",
     "actionPlan 要结合用户的 AI 落地画像（当前阶段、落地方式偏好、主要阻力）给出具体可执行的行动方向，而不是泛泛的建议。",
@@ -63,22 +74,74 @@ export function buildNarrativeSystemPrompt(): string {
   ].join("\n");
 }
 
-export function parseNarrative(text: string, fallback: DiagnosisNarrative): DiagnosisNarrative | null {
+export function createEmptyNarrative(): DiagnosisNarrative {
+  return {
+    actionInsights: ["", "", "", "", ""],
+    actionPlan: {
+      week: "",
+      month: "",
+      ongoing: "",
+    },
+    closing: {
+      technology: "",
+      philosophy: "",
+      quote: "",
+    },
+  };
+}
+
+export function applyNarrativePatch(
+  narrative: DiagnosisNarrative,
+  patch: DiagnosisNarrativePatch,
+): DiagnosisNarrative {
+  if (patch.type === "actionInsight") {
+    const actionInsights = [...narrative.actionInsights];
+    actionInsights[patch.index] = patch.text;
+    return { ...narrative, actionInsights };
+  }
+  if (patch.type === "actionPlan") {
+    return {
+      ...narrative,
+      actionPlan: {
+        ...narrative.actionPlan,
+        [patch.key]: patch.text,
+      },
+    };
+  }
+  return {
+    ...narrative,
+    closing: {
+      ...narrative.closing,
+      [patch.key]: patch.text,
+    },
+  };
+}
+
+export function parseNarrativePatch(line: string): DiagnosisNarrativePatch | null {
+  try {
+    const parsed = JSON.parse(line.trim()) as Partial<DiagnosisNarrativePatch>;
+    const actionInsightIndex = parsed.type === "actionInsight" ? parsed.index : undefined;
+    if (typeof actionInsightIndex === "number" && Number.isInteger(actionInsightIndex) && actionInsightIndex >= 0 && actionInsightIndex < 5 && isNonEmptyString(parsed.text)) {
+      return { type: "actionInsight", index: actionInsightIndex, text: parsed.text };
+    }
+    if (parsed.type === "actionPlan" && isActionPlanKey(parsed.key) && isNonEmptyString(parsed.text)) {
+      return { type: "actionPlan", key: parsed.key, text: parsed.text };
+    }
+    if (parsed.type === "closing" && isClosingKey(parsed.key) && isNonEmptyString(parsed.text)) {
+      return { type: "closing", key: parsed.key, text: parsed.text };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseNarrative(text: string): DiagnosisNarrative | null {
   const trimmed = text.trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
   try {
     const parsed = JSON.parse(trimmed) as Partial<DiagnosisNarrative>;
-    // LLM 只增强叙事字段；缺字段时保留算法生成的本地报告，避免展示空段落。
-    return {
-      actionInsights: parsed.actionInsights?.length ? parsed.actionInsights : fallback.actionInsights,
-      actionPlan: {
-        ...fallback.actionPlan,
-        ...parsed.actionPlan,
-      },
-      closing: {
-        ...fallback.closing,
-        ...parsed.closing,
-      },
-    };
+    if (!isCompleteNarrative(parsed)) return null;
+    return parsed;
   } catch {
     return null;
   }
@@ -98,4 +161,30 @@ function buildDiagnosisRecordInclude() {
       },
     },
   } satisfies Prisma.DiagnosisQuizResultInclude;
+}
+
+export function isCompleteNarrative(narrative: Partial<DiagnosisNarrative>): narrative is DiagnosisNarrative {
+  return (
+    Array.isArray(narrative.actionInsights)
+    && narrative.actionInsights.length === 5
+    && narrative.actionInsights.every(isNonEmptyString)
+    && isNonEmptyString(narrative.actionPlan?.week)
+    && isNonEmptyString(narrative.actionPlan?.month)
+    && isNonEmptyString(narrative.actionPlan?.ongoing)
+    && isNonEmptyString(narrative.closing?.technology)
+    && isNonEmptyString(narrative.closing?.philosophy)
+    && isNonEmptyString(narrative.closing?.quote)
+  );
+}
+
+function isActionPlanKey(value: unknown): value is keyof DiagnosisNarrative["actionPlan"] {
+  return value === "week" || value === "month" || value === "ongoing";
+}
+
+function isClosingKey(value: unknown): value is keyof DiagnosisNarrative["closing"] {
+  return value === "technology" || value === "philosophy" || value === "quote";
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }

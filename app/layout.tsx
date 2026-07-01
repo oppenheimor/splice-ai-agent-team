@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import "animal-island-ui/style";
 import "./globals.css";
 
@@ -14,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      <body className="bg-background text-foreground antialiased">{children}</body>
+      <body className={`${GeistSans.variable} ${GeistMono.variable} bg-background text-foreground antialiased`}>{children}</body>
     </html>
   );
 }
