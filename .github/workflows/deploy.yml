@@ -35,12 +35,22 @@ jobs:
           set -euo pipefail
 
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          CACHE_IMAGE="${IMAGE}:buildcache"
 
-          # 当前 self-hosted runner 没有 buildx 插件，先用 latest 镜像作为兼容缓存源。
+          # 当前 self-hosted runner 没有 buildx 插件，使用经典 builder 的阶段镜像做缓存源。
+          docker pull "${CACHE_IMAGE}" || true
           docker pull "${IMAGE}:latest" || true
 
-          DOCKER_BUILDKIT=1 docker build \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
+          DOCKER_BUILDKIT=0 docker build \
+            --target builder \
+            --cache-from "${CACHE_IMAGE}" \
+            --cache-from "${IMAGE}:latest" \
+            -t "${CACHE_IMAGE}" \
+            .
+          docker push "${CACHE_IMAGE}"
+
+          DOCKER_BUILDKIT=0 docker build \
+            --cache-from "${CACHE_IMAGE}" \
             --cache-from "${IMAGE}:latest" \
             -t "${IMAGE}:${{ env.SHORT_SHA }}" \
             -t "${IMAGE}:latest" \
