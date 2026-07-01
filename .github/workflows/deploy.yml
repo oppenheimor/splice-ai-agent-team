@@ -29,52 +29,26 @@ jobs:
               -u '${{ secrets.VOLCENGINE_CR_USERNAME }}' \
               --password-stdin
 
-      # ── 3. 准备 Docker Buildx Builder ──
-      - name: Prepare Docker Buildx builder
-        run: |
-          set -euo pipefail
-
-          docker buildx version
-
-          BUILDER_NAME=agent-team-builder
-          BUILDKIT_IMAGE=m.daocloud.io/docker.io/moby/buildkit:buildx-stable-1
-
-          if docker buildx inspect "${BUILDER_NAME}" >/dev/null 2>&1; then
-            docker buildx use "${BUILDER_NAME}"
-          else
-            docker buildx create \
-              --name "${BUILDER_NAME}" \
-              --driver docker-container \
-              --driver-opt image="${BUILDKIT_IMAGE}" \
-              --use
-          fi
-
-          if ! docker buildx inspect --bootstrap; then
-            docker buildx rm "${BUILDER_NAME}" || true
-            docker buildx create \
-              --name "${BUILDER_NAME}" \
-              --driver docker-container \
-              --driver-opt image="${BUILDKIT_IMAGE}" \
-              --use
-            docker buildx inspect --bootstrap
-          fi
-
-      # ── 4. 构建 & 推送 ──
+      # ── 3. 构建 & 推送 ──
       - name: Build & Push
         run: |
           set -euo pipefail
 
-          docker buildx build \
-            --builder agent-team-builder \
-            --progress=plain \
-            --cache-from type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache \
-            --cache-to type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            --push \
-            .
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
 
-      # ── 5. 准备 SSH ──
+          # 当前 self-hosted runner 没有 buildx 插件，先用 latest 镜像作为兼容缓存源。
+          docker pull "${IMAGE}:latest" || true
+
+          DOCKER_BUILDKIT=1 docker build \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --cache-from "${IMAGE}:latest" \
+            -t "${IMAGE}:${{ env.SHORT_SHA }}" \
+            -t "${IMAGE}:latest" \
+            .
+          docker push "${IMAGE}:${{ env.SHORT_SHA }}"
+          docker push "${IMAGE}:latest"
+
+      # ── 4. 准备 SSH ──
       - name: Prepare SSH key
         run: |
           install -m 700 -d ~/.ssh
@@ -82,7 +56,7 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H '${{ secrets.SERVER_HOST }}' >> ~/.ssh/known_hosts
 
-      # ── 6. 校验并上传 compose ──
+      # ── 5. 校验并上传 compose ──
       - name: Upload compose file
         run: |
           test -f docker-compose.yml || (echo "❌ docker-compose.yml not found" && exit 1)
@@ -91,7 +65,7 @@ jobs:
           scp -i ~/.ssh/deploy_key docker-compose.yml \
             '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/deploy/agent-team/docker-compose.yml'
 
-      # ── 7. 在服务器上直接写入 .env（不落本地磁盘） ──
+      # ── 6. 在服务器上直接写入 .env（不落本地磁盘） ──
       - name: Write production env on server
         run: |
           ssh -i ~/.ssh/deploy_key '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}' <<'EOF'
@@ -105,7 +79,7 @@ jobs:
           EOL
           EOF
 
-      # ── 8. 部署 ──
+      # ── 7. 部署 ──
       - name: Deploy to Server
         timeout-minutes: 60
         run: |
