@@ -29,17 +29,26 @@ jobs:
               -u '${{ secrets.VOLCENGINE_CR_USERNAME }}' \
               --password-stdin
 
-      # ── 3. 构建 & 推送 ──
-      - name: Build & Push
-        run: |
-          docker build \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            .
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      # ── 3. 设置 Docker Buildx ──
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver: docker-container
 
-      # ── 4. 准备 SSH ──
+      # ── 4. 构建 & 推送 ──
+      - name: Build & Push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+
+      # ── 5. 准备 SSH ──
       - name: Prepare SSH key
         run: |
           install -m 700 -d ~/.ssh
@@ -47,7 +56,7 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H '${{ secrets.SERVER_HOST }}' >> ~/.ssh/known_hosts
 
-      # ── 5. 校验并上传 compose ──
+      # ── 6. 校验并上传 compose ──
       - name: Upload compose file
         run: |
           test -f docker-compose.yml || (echo "❌ docker-compose.yml not found" && exit 1)
@@ -56,7 +65,7 @@ jobs:
           scp -i ~/.ssh/deploy_key docker-compose.yml \
             '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/deploy/agent-team/docker-compose.yml'
 
-      # ── 6. 在服务器上直接写入 .env（不落本地磁盘） ──
+      # ── 7. 在服务器上直接写入 .env（不落本地磁盘） ──
       - name: Write production env on server
         run: |
           ssh -i ~/.ssh/deploy_key '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}' <<'EOF'
@@ -70,7 +79,7 @@ jobs:
           EOL
           EOF
 
-      # ── 7. 部署 ──
+      # ── 8. 部署 ──
       - name: Deploy to Server
         timeout-minutes: 60
         run: |
