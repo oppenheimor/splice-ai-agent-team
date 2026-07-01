@@ -92,30 +92,32 @@ export const demoStyles: Record<DiagnosisDemoStyleId, DiagnosisDemoStyle> = {
 
 export const demoResult: DiagnosisResult = {
   answers: {
-    q1: "A",
-    q2: "C",
-    q3: "B",
-    q4: "C",
-    q13: "C",
-    q5: "A",
-    q6: "B",
-    q7: "C",
-    q8: "B",
-    q9: "C",
-    q10: ["A", "B", "C"],
-    q11: ["A", "C", "D", "F"],
-    q12: "C",
-    q14: "B",
-    q15: "C",
-    q16: "D",
-    q17: "C",
-    q18: "B",
-    q19: "C",
-    q20: "B",
-    q21: "D",
-    q22: "D",
-    q23: "C",
-    q24: "A",
+    // 经营画像 q1-q10（4 选项 A-D）
+    q1: "A",  // 商业视野：守稳 → 深耕
+    q2: "B",  // 商业视野：稳后拓展 → 偏深耕
+    q3: "C",  // 判断方式：拆解原因 → 偏数据验证
+    q4: "D",  // 判断方式：建验证框架 → 强数据验证
+    q5: "B",  // 组织落地：主框架后完善 → 偏系统重构
+    q6: "C",  // 组织落地：小团队深化 → 偏快速试水
+    q7: "B",  // 投入心智：3 月量化 → 偏成本优先
+    q8: "B",  // 投入心智：缩小范围 → 偏成本优先
+    q9: "B",  // 风险策略：先建评估清单 → 偏风险防守
+    q10: "B", // 风险策略：方向对就调整 → 偏风险防守
+    // AI 落地画像 q11-q24
+    q11: "C", // AI 态度：已尝试，找更深场景
+    q12: "B", // 关注偏好：商业落地
+    q13: "C", // 使用时长：2-4 小时
+    q14: ["A", "B", "C"], // 工具：聊天+低代码+代码类
+    q15: "C", // 工作流：固定场景（workflowLevel=2 → L4）
+    q16: "C", // AI 边界：销售/情感判断难
+    q17: "C", // AI 参照系：见过，知道怎么做
+    q18: "C", // 人机协作：信任主体
+    q19: ["A", "C", "D"], // 认知宽度：干活+分析+服务 → 3项=拓展认知
+    q20: "C", // 刚需：客户转化与服务
+    q21: "D", // 预期价值：差异化竞争优势
+    q22: "C", // 落地偏好：小流程验证
+    q23: "A", // 主要阻力：场景不清晰
+    q24: "B", // 深度诊断意愿：1V1 深聊
   },
   dimensionScores: {
     V: {
@@ -125,12 +127,12 @@ export const demoResult: DiagnosisResult = {
       rightLabel: "拓展",
       leftLetter: "D",
       rightLetter: "E",
-      left: 64,
-      right: 36,
+      left: 84,
+      right: 17,
       dominantLetter: "D",
       dominantLabel: "深耕",
-      diff: 28,
-      stars: 2,
+      diff: 67,
+      stars: 1,
     },
     D: {
       code: "D",
@@ -139,12 +141,12 @@ export const demoResult: DiagnosisResult = {
       rightLabel: "数据验证",
       leftLetter: "G",
       rightLetter: "P",
-      left: 38,
-      right: 62,
+      left: 17,
+      right: 84,
       dominantLetter: "P",
       dominantLabel: "数据验证",
-      diff: 24,
-      stars: 2,
+      diff: 67,
+      stars: 1,
     },
     E: {
       code: "E",
@@ -153,11 +155,11 @@ export const demoResult: DiagnosisResult = {
       rightLabel: "快速试水",
       leftLetter: "R",
       rightLetter: "A",
-      left: 46,
-      right: 54,
-      dominantLetter: "A",
+      left: 50,
+      right: 50,
+      dominantLetter: "B",
       dominantLabel: "平衡",
-      diff: 8,
+      diff: 0,
       stars: 4,
     },
     A: {
@@ -167,12 +169,12 @@ export const demoResult: DiagnosisResult = {
       rightLabel: "长期投入",
       leftLetter: "C",
       rightLetter: "L",
-      left: 58,
-      right: 42,
+      left: 67,
+      right: 33,
       dominantLetter: "C",
-      dominantLabel: "平衡",
-      diff: 16,
-      stars: 3,
+      dominantLabel: "成本优先",
+      diff: 34,
+      stars: 2,
     },
     B: {
       code: "B",
@@ -181,37 +183,37 @@ export const demoResult: DiagnosisResult = {
       rightLabel: "创新进攻",
       leftLetter: "S",
       rightLetter: "I",
-      left: 55,
-      right: 45,
+      left: 67,
+      right: 33,
       dominantLetter: "S",
-      dominantLabel: "平衡",
-      diff: 10,
-      stars: 4,
+      dominantLabel: "风险防守",
+      diff: 34,
+      stars: 2,
     },
   },
-  featureCode: "DP",
-  operatorCode: "DP-EP",
+  featureCode: "PD",
+  operatorCode: "PD-EP",
   operatorTypeName: "数据验证型",
-  operatorTypeDefinition: "重视拆解、数据和可复制性，适合从流程指标和自动化看板切入。你的辅助倾向是「深耕」，适合把主优势和第二优势组合成一个可落地的小切口。",
+  operatorTypeDefinition: "重视拆解、数据和可复制性，适合从流程指标和自动化看板切入。 你的辅助倾向是「深耕」，适合把主优势和第二优势组合成一个可落地的小切口。",
   operatorType: {
     code: "P",
     name: "数据验证型",
-    definition: "重视拆解、数据和可复制性，适合从流程指标和自动化看板切入。你的辅助倾向是「深耕」，适合把主优势和第二优势组合成一个可落地的小切口。",
+    definition: "重视拆解、数据和可复制性，适合从流程指标和自动化看板切入。 你的辅助倾向是「深耕」，适合把主优势和第二优势组合成一个可落地的小切口。",
     primaryTrait: "数据验证",
     secondaryTrait: "深耕",
   },
   aiAdoptionStage: "L4",
   aiAdoptionStageLabel: "工具瓶颈层",
   aiReadiness: {
-    total: 72,
+    total: 70,
     level: "L4",
     label: "工具瓶颈层",
     summary: "你有丰富的工具经验，但工作流整合还有提升空间——这是从「会用」到「用好」的关键节点。",
     axes: {
-      attitude: { code: "attitude", label: "AI 态度", score: 75, level: "高", insight: "认可 AI 价值，准备系统化落地。深度诊断可以直接规划工作流。" },
+      attitude: { code: "attitude", label: "AI 态度", score: 65, level: "高", insight: "已有初步体验，正在寻找更值得深入的场景。" },
       usage: { code: "usage", label: "使用强度", score: 65, level: "高", insight: "每天 2-4 小时，AI 已经进入工作流的重要部分。" },
-      workflow: { code: "workflow", label: "工作流融合", score: 75, level: "高", insight: "多个场景已经有固定用法，下一步是形成系统闭环。" },
-      tooling: { code: "tooling", label: "工具成熟度", score: 70, level: "高", insight: "已使用聊天工具、低代码搭建工具、代码类 AI 工具，工具覆盖度较广，可考虑整合成系统工作流。" },
+      workflow: { code: "workflow", label: "工作流融合", score: 60, level: "高", insight: "已有一个固定使用场景，这是很好的起点。" },
+      tooling: { code: "tooling", label: "工具成熟度", score: 90, level: "高", insight: "已使用聊天工具、低代码搭建工具、代码类 AI 工具，工具覆盖度较广，可考虑整合成系统工作流。" },
     },
   },
   aiConcern: { code: "B", label: "商业落地关注", description: "你更关注 AI 能带来哪些可量化的业务结果，适合在深度诊断中直接聚焦场景 ROI 和交付方案。" },
@@ -222,11 +224,12 @@ export const demoResult: DiagnosisResult = {
     label: "客户转化与服务",
     description: "客服、销售和私域运营是人力密集型场景，AI 能显著提升响应速度和覆盖密度。",
     firstStep: "梳理一条客户跟进流程，把重复性回复和阶段推进动作提取出来交给 AI 辅助。",
+    toolRecommendations: ["Coze / 扣子 — 搭建客服与销售 Agent", "企微 + AI 私信模板 — 私域运营自动化"],
   },
   userType: "EP",
   userTypeLabel: "企业家实用派",
   cognitiveWidth: "拓展认知",
-  blindSpots: ["让 AI 做市场调研、竞品分析和数据整理，减少拍脑袋决策", "让 AI 管理订单、库存和排期，把零散流程接成系统"],
+  blindSpots: ["让 AI 承担内容创作和宣传素材，把灵感变成稳定产能", "让 AI 管理订单、库存和排期，把零散流程接成系统", "让 AI 辅助商业方向、产品选择和定价策略，补上决策推演层"],
   justNeed: "C",
   justNeedLabel: "客户转化与服务",
   crowdType: "有基础遇瓶颈企业主",

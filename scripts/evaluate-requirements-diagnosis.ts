@@ -3,13 +3,16 @@ import { dirname, resolve } from "node:path";
 import { calculateDiagnosis } from "../lib/requirements-diagnosis/scoring";
 import type { DiagnosisResult, QuizAnswers, QuizOptionValue, QuestionId } from "../lib/requirements-diagnosis/types";
 
-type SingleQuestionId = Exclude<QuestionId, "q10" | "q11">;
+// v3: q14（工具多选）和 q19（认知宽度多选）是多选题，排除在单选笛卡尔之外
+type SingleQuestionId = Exclude<QuestionId, "q14" | "q19">;
 
-const REPORT_PATH = resolve("docs/2026-05-31-需求诊断结果合理性评估报告.md");
-const SINGLE_VALUES = ["A", "B", "C"] as const;
-const Q9_VALUES = ["A", "B", "C", "D"] as const;
-const Q10_VALUES = ["A", "B", "C", "D", "E"] as const;
-const Q11_VALUES = ["A", "B", "C", "D", "E", "F"] as const;
+const REPORT_PATH = resolve("docs/2026-06-30-需求诊断结果合理性评估报告.md");
+// 经营画像 q1-q10 各 4 选项（A=强左 / B=偏左 / C=偏右 / D=强右）
+const SINGLE_VALUES = ["A", "C", "D"] as const;
+const Q13_VALUES = ["A", "B", "C", "D"] as const; // 使用时长
+const Q14_VALUES = ["A", "B", "C", "D", "E"] as const; // 工具
+const Q19_VALUES = ["A", "B", "C", "D", "E", "F"] as const; // 认知宽度
+const Q20_VALUES = ["A", "B", "C", "D", "E"] as const; // 刚需诉求
 const EXPECTED_OPERATOR_TYPES = [
   "稳健深耕型",
   "增长探索型",
@@ -24,70 +27,68 @@ const EXPECTED_OPERATOR_TYPES = [
   "平衡统筹型",
 ] as const;
 
+// B+C 交替使每个经营维度精确平局（diff=0），产出平衡统筹型
 const BASE_ANSWERS = {
-  q1: "C",
-  q2: "C",
-  q14: "C",
-  q3: "C",
-  q15: "C",
-  q16: "C",
-  q4: "C",
-  q13: "C",
-  q17: "C",
-  q5: "C",
-  q18: "C",
-  q19: "C",
-  q6: "C",
-  q7: "C",
-  q20: "C",
-  q21: "C",
-  q8: "B",
-  q9: "B",
-  q10: ["A"],
+  q1: "B", q2: "C",   // 商业视野 balanced
+  q3: "B", q4: "C",   // 判断方式 balanced
+  q5: "B", q6: "C",   // 组织落地 balanced
+  q7: "B", q8: "C",   // 投入心智 balanced
+  q9: "B", q10: "C",  // 风险策略 balanced
+  q11: "B",            // AI 态度：有兴趣
+  q12: "B",            // 关注偏好：商业落地
+  q13: "B",            // 使用时长：1-2h
+  q14: ["A"] as QuizOptionValue[],  // 工具：聊天工具
+  q15: "B",            // 工作流：个人临时
+  q16: "A",
+  q17: "B",
+  q18: "B",
+  q19: ["A", "C", "D"] as QuizOptionValue[],  // 认知宽度：3 项 → 拓展认知
+  q20: "A",            // 刚需：重复执行
+  q21: "A",
   q22: "B",
-  q11: ["A", "C", "D"],
-  q12: "C",
-  q23: "C",
-  q24: "A",
+  q23: "A",
+  q24: "D",
 } satisfies Required<QuizAnswers>;
 
 const GOLDEN_CASES = [
   { name: "经营画像：稳健深耕", answers: { ...BASE_ANSWERS, q1: "A", q2: "A" }, expected: { operatorTypeName: "稳健深耕型" } },
-  { name: "经营画像：增长探索", answers: { ...BASE_ANSWERS, q1: "E", q2: "E" }, expected: { operatorTypeName: "增长探索型" } },
-  { name: "经营画像：经验判断", answers: { ...BASE_ANSWERS, q3: "A" }, expected: { operatorTypeName: "经验判断型" } },
-  { name: "经营画像：数据验证", answers: { ...BASE_ANSWERS, q3: "E" }, expected: { operatorTypeName: "数据验证型" } },
-  { name: "经营画像：系统重构", answers: { ...BASE_ANSWERS, q4: "A", q13: "A" }, expected: { operatorTypeName: "系统重构型" } },
-  { name: "经营画像：快速试水", answers: { ...BASE_ANSWERS, q4: "E", q13: "E" }, expected: { operatorTypeName: "快速试水型" } },
-  { name: "经营画像：成本优先", answers: { ...BASE_ANSWERS, q5: "A" }, expected: { operatorTypeName: "成本优先型" } },
-  { name: "经营画像：长期投入", answers: { ...BASE_ANSWERS, q5: "E" }, expected: { operatorTypeName: "长期投入型" } },
-  { name: "经营画像：风险防守", answers: { ...BASE_ANSWERS, q6: "A", q7: "A" }, expected: { operatorTypeName: "风险防守型" } },
-  { name: "经营画像：创新进攻", answers: { ...BASE_ANSWERS, q6: "E", q7: "E" }, expected: { operatorTypeName: "创新进攻型" } },
+  { name: "经营画像：增长探索", answers: { ...BASE_ANSWERS, q1: "D", q2: "D" }, expected: { operatorTypeName: "增长探索型" } },
+  { name: "经营画像：经验判断", answers: { ...BASE_ANSWERS, q3: "A", q4: "A" }, expected: { operatorTypeName: "经验判断型" } },
+  { name: "经营画像：数据验证", answers: { ...BASE_ANSWERS, q3: "D", q4: "D" }, expected: { operatorTypeName: "数据验证型" } },
+  { name: "经营画像：系统重构", answers: { ...BASE_ANSWERS, q5: "A", q6: "A" }, expected: { operatorTypeName: "系统重构型" } },
+  { name: "经营画像：快速试水", answers: { ...BASE_ANSWERS, q5: "D", q6: "D" }, expected: { operatorTypeName: "快速试水型" } },
+  { name: "经营画像：成本优先", answers: { ...BASE_ANSWERS, q7: "A", q8: "A" }, expected: { operatorTypeName: "成本优先型" } },
+  { name: "经营画像：长期投入", answers: { ...BASE_ANSWERS, q7: "D", q8: "D" }, expected: { operatorTypeName: "长期投入型" } },
+  { name: "经营画像：风险防守", answers: { ...BASE_ANSWERS, q9: "A", q10: "A" }, expected: { operatorTypeName: "风险防守型" } },
+  { name: "经营画像：创新进攻", answers: { ...BASE_ANSWERS, q9: "D", q10: "D" }, expected: { operatorTypeName: "创新进攻型" } },
   { name: "经营画像：平衡统筹", answers: BASE_ANSWERS, expected: { operatorTypeName: "平衡统筹型" } },
-  { name: "AI 阶段：无常态化工具优先判 L1", answers: { ...BASE_ANSWERS, q9: "D", q10: ["E"] }, expected: { aiAdoptionStage: "L1" } },
-  { name: "AI 阶段：全域刚需", answers: { ...BASE_ANSWERS, q8: "B", q9: "D", q10: ["A", "B", "C", "D"], q22: "E" }, expected: { aiAdoptionStage: "L5" } },
+  { name: "AI 阶段：无常态化工具优先判 L1", answers: { ...BASE_ANSWERS, q13: "D", q14: ["E"] }, expected: { aiAdoptionStage: "L1" } },
+  { name: "AI 阶段：全域刚需", answers: { ...BASE_ANSWERS, q12: "B", q13: "D", q14: ["A", "B", "C", "D"], q15: "D" }, expected: { aiAdoptionStage: "L5" } },
   {
     name: "真实样本：高频使用代码与 Agent 工具",
     answers: {
       ...BASE_ANSWERS,
-      q1: "D",
+      q1: "B",
       q2: "C",
-      q3: "D",
-      q4: "C",
-      q13: "D",
+      q3: "C",
+      q4: "D",
       q5: "C",
       q6: "D",
-      q7: "A",
+      q7: "B",
       q8: "B",
-      q9: "D",
-      q10: ["D", "C", "A"],
-      q11: ["A", "B", "C", "D", "F", "E"],
-      q12: "C",
-      q22: "E",
+      q9: "B",
+      q10: "C",
+      q12: "B",
+      q13: "D",
+      q14: ["D", "C", "A"] as QuizOptionValue[],
+      q15: "D",
+      q19: ["A", "B", "C", "D", "F", "E"] as QuizOptionValue[],
+      q20: "C",
     },
     expected: { operatorTypeName: "数据验证型", aiAdoptionStage: "L5", justNeedLabel: "客户转化与服务" },
   },
-  { name: "刚需方向：重复执行工作", answers: { ...BASE_ANSWERS, q12: "A" }, expected: { justNeedLabel: "重复性执行工作" } },
-  { name: "刚需方向：内容与创意产出", answers: { ...BASE_ANSWERS, q12: "B" }, expected: { justNeedLabel: "内容与创意产出" } },
+  { name: "刚需方向：重复性执行工作", answers: { ...BASE_ANSWERS, q20: "A" }, expected: { justNeedLabel: "重复性执行工作" } },
+  { name: "刚需方向：内容与创意产出", answers: { ...BASE_ANSWERS, q20: "B" }, expected: { justNeedLabel: "内容与创意产出" } },
 ] satisfies Array<{
   name: string;
   answers: Required<QuizAnswers>;
@@ -95,22 +96,23 @@ const GOLDEN_CASES = [
 }>;
 
 function main() {
-  const operatorCombos = cartesianSingles(["q1", "q2", "q3", "q4", "q13", "q5", "q6", "q7"]);
-  const q8Combos = ["A", "B", "C"] as const;
-  const q10Combos = validQ10Combinations();
-  const q11Combos = nonEmptySubsets(Q11_VALUES);
-  const q12Combos = ["A", "B", "C"] as const;
-  const totalLogicalCombinations = operatorCombos.length * q8Combos.length * Q9_VALUES.length * q10Combos.length * q11Combos.length * q12Combos.length;
+  // q1-q10 经营画像笛卡尔穷举（3 代表值 × 10 题）
+  const operatorCombos = cartesianSingles(["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10"]);
+  const q12Combos = ["A", "B", "C"] as const;  // AI 关注偏好
+  const q14Combos = validQ14Combinations();     // 工具有效组合
+  const q19Combos = nonEmptySubsets(Q19_VALUES);
+  const q20Combos = Q20_VALUES;                 // 刚需诉求
+  const totalLogicalCombinations = operatorCombos.length * q12Combos.length * Q13_VALUES.length * q14Combos.length * q19Combos.length * q20Combos.length;
 
   const operatorStats = scanOperatorTypes(operatorCombos);
   const questionInfluenceStats = scanQuestionInfluence(operatorCombos);
-  const adoptionStats = scanAdoptionStages(q8Combos, Q9_VALUES, q10Combos);
-  const cognitionStats = scanCognitionWidth(q11Combos);
-  const needStats = scanJustNeed(q12Combos);
+  const adoptionStats = scanAdoptionStages(q12Combos, Q13_VALUES, q14Combos);
+  const cognitionStats = scanCognitionWidth(q19Combos);
+  const needStats = scanJustNeed(q20Combos);
   const edgeCases = buildEdgeCases();
   const goldenStats = scanGoldenCases();
   const representativeCases = buildRepresentativeCases(operatorCombos);
-  const adoptionRepresentativeCases = buildAdoptionRepresentativeCases(q8Combos, Q9_VALUES, q10Combos);
+  const adoptionRepresentativeCases = buildAdoptionRepresentativeCases(q12Combos, Q13_VALUES, q14Combos);
   const allSamples = dedupeSamples([...representativeCases, ...adoptionRepresentativeCases, ...edgeCases]);
   const judgedSamples = allSamples.map((sample) => judgeSample(sample.name, sample.answers, calculateDiagnosis(sample.answers)));
   const findings = buildFindings(judgedSamples, operatorStats, questionInfluenceStats, adoptionStats, cognitionStats, goldenStats);
@@ -123,8 +125,8 @@ function main() {
     cognitionStats,
     needStats,
     goldenStats,
-    q10Combos,
-    q11Combos,
+    q14Combos,
+    q19Combos,
     judgedSamples,
     findings,
   });
@@ -148,7 +150,7 @@ function cartesianSingles(ids: SingleQuestionId[]): Array<Record<string, QuizOpt
   return output;
 }
 
-function validQ10Combinations(): QuizOptionValue[][] {
+function validQ14Combinations(): QuizOptionValue[][] {
   const toolCombos = nonEmptySubsets(["A", "B", "C", "D"] as const);
   return [...toolCombos, ["E"]];
 }
@@ -192,7 +194,7 @@ function scanOperatorTypes(combos: Array<Record<string, QuizOptionValue>>) {
 
 function scanQuestionInfluence(combos: Array<Record<string, QuizOptionValue>>) {
   const perQuestion = new Map<string, Map<string, Map<string, number>>>();
-  for (const questionId of ["q1", "q2", "q3", "q4", "q13", "q5", "q6", "q7"]) {
+  for (const questionId of ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10"]) {
     perQuestion.set(questionId, new Map());
   }
 
@@ -219,46 +221,46 @@ function scanQuestionInfluence(combos: Array<Record<string, QuizOptionValue>>) {
   return { perQuestion, dominanceWarnings };
 }
 
-function scanAdoptionStages(q8Values: readonly QuizOptionValue[], q9Values: readonly QuizOptionValue[], q10Combos: QuizOptionValue[][]) {
+function scanAdoptionStages(q12Values: readonly QuizOptionValue[], q13Values: readonly QuizOptionValue[], q14Combos: QuizOptionValue[][]) {
   const byStage = new Map<string, number>();
-  const byStageAndQ10 = new Map<string, number>();
+  const byStageAndQ14 = new Map<string, number>();
   const contradictions: Array<{ answers: QuizAnswers; result: DiagnosisResult; reason: string }> = [];
 
-  for (const q8 of q8Values) {
-    for (const q9 of q9Values) {
-      for (const q10 of q10Combos) {
-        const answers = { ...BASE_ANSWERS, q8, q9, q10 };
+  for (const q12 of q12Values) {
+    for (const q13 of q13Values) {
+      for (const q14 of q14Combos) {
+        const answers = { ...BASE_ANSWERS, q12, q13, q14 };
         const result = calculateDiagnosis(answers);
         increment(byStage, `${result.aiAdoptionStage} · ${result.aiAdoptionStageLabel}`);
-        increment(byStageAndQ10, `${result.aiAdoptionStage} / Q10=${q10.join("")}`);
-        if (q10.includes("E") && q9 !== "A") {
-          contradictions.push({ answers, result, reason: "Q10 选择纯人工，但 Q9 声称每天有效使用 AI 超过 0 小时。" });
+        increment(byStageAndQ14, `${result.aiAdoptionStage} / Q14=${q14.join("")}`);
+        if (q14.includes("E") && q13 !== "A") {
+          contradictions.push({ answers, result, reason: "Q14 选择纯人工，但 Q13 声称每天有效使用 AI 超过 0 小时。" });
         }
       }
     }
   }
 
-  return { total: q8Values.length * q9Values.length * q10Combos.length, byStage, byStageAndQ10, contradictions };
+  return { total: q12Values.length * q13Values.length * q14Combos.length, byStage, byStageAndQ14, contradictions };
 }
 
-function scanCognitionWidth(q11Combos: QuizOptionValue[][]) {
+function scanCognitionWidth(q19Combos: QuizOptionValue[][]) {
   const byWidth = new Map<string, number>();
   const blindSpotLengths = new Map<number, number>();
-  for (const q11 of q11Combos) {
-    const result = calculateDiagnosis({ ...BASE_ANSWERS, q11 });
+  for (const q19 of q19Combos) {
+    const result = calculateDiagnosis({ ...BASE_ANSWERS, q19 });
     increment(byWidth, result.cognitiveWidth);
     increment(blindSpotLengths, result.blindSpots.length);
   }
-  return { total: q11Combos.length, byWidth, blindSpotLengths };
+  return { total: q19Combos.length, byWidth, blindSpotLengths };
 }
 
-function scanJustNeed(q12Values: readonly QuizOptionValue[]) {
+function scanJustNeed(q20Values: readonly QuizOptionValue[]) {
   const byNeed = new Map<string, number>();
-  for (const q12 of q12Values) {
-    const result = calculateDiagnosis({ ...BASE_ANSWERS, q12 });
+  for (const q20 of q20Values) {
+    const result = calculateDiagnosis({ ...BASE_ANSWERS, q20 });
     increment(byNeed, result.justNeedLabel);
   }
-  return { total: q12Values.length, byNeed };
+  return { total: q20Values.length, byNeed };
 }
 
 function scanGoldenCases() {
@@ -298,15 +300,15 @@ function buildRepresentativeCases(combos: Array<Record<string, QuizOptionValue>>
 }
 
 function buildAdoptionRepresentativeCases(
-  q8Values: readonly QuizOptionValue[],
-  q9Values: readonly QuizOptionValue[],
-  q10Combos: QuizOptionValue[][],
+  q12Values: readonly QuizOptionValue[],
+  q13Values: readonly QuizOptionValue[],
+  q14Combos: QuizOptionValue[][],
 ) {
   const byStage = new Map<string, Array<{ answers: Required<QuizAnswers>; result: DiagnosisResult }>>();
-  for (const q8 of q8Values) {
-    for (const q9 of q9Values) {
-      for (const q10 of q10Combos) {
-        const answers = { ...BASE_ANSWERS, q8, q9, q10 };
+  for (const q12 of q12Values) {
+    for (const q13 of q13Values) {
+      for (const q14 of q14Combos) {
+        const answers = { ...BASE_ANSWERS, q12, q13, q14 };
         const result = calculateDiagnosis(answers);
         const bucket = byStage.get(result.aiAdoptionStage) || [];
         bucket.push({ answers, result });
@@ -318,8 +320,8 @@ function buildAdoptionRepresentativeCases(
   const cases: Array<{ name: string; answers: Required<QuizAnswers> }> = [];
   for (const [stage, items] of byStage) {
     const first = items[0];
-    const withManyTools = [...items].sort((a, b) => (b.answers.q10 as QuizOptionValue[]).length - (a.answers.q10 as QuizOptionValue[]).length)[0];
-    const withManual = items.find((item) => (item.answers.q10 as QuizOptionValue[]).includes("E"));
+    const withManyTools = [...items].sort((a, b) => (b.answers.q14 as QuizOptionValue[]).length - (a.answers.q14 as QuizOptionValue[]).length)[0];
+    const withManual = items.find((item) => (item.answers.q14 as QuizOptionValue[]).includes("E"));
     cases.push({ name: `AI阶段代表样本：${stage}`, answers: first.answers });
     if (withManyTools && formatAnswers(withManyTools.answers) !== formatAnswers(first.answers)) {
       cases.push({ name: `AI阶段多工具样本：${stage}`, answers: withManyTools.answers });
@@ -333,16 +335,16 @@ function buildAdoptionRepresentativeCases(
 
 function buildEdgeCases() {
   return [
-    { name: "边界样本：全 A 经营画像", answers: { ...BASE_ANSWERS, q1: "A", q2: "A", q3: "A", q4: "A", q13: "A", q5: "A", q6: "A", q7: "A" } },
-    { name: "边界样本：全 B 经营画像", answers: { ...BASE_ANSWERS, q1: "B", q2: "B", q3: "B", q4: "B", q13: "B", q5: "B", q6: "B", q7: "B" } },
-    { name: "边界样本：全 C 经营画像", answers: { ...BASE_ANSWERS, q1: "C", q2: "C", q3: "C", q4: "C", q13: "C", q5: "C", q6: "C", q7: "C" } },
-    { name: "边界样本：纯人工但高使用时长", answers: { ...BASE_ANSWERS, q9: "D", q10: ["E"] } },
-    { name: "边界样本：高阶工具组合", answers: { ...BASE_ANSWERS, q8: "B", q9: "D", q10: ["A", "B", "C", "D"], q11: ["A", "B", "C", "D", "E", "F"] } },
-    { name: "边界样本：低使用但全景认知", answers: { ...BASE_ANSWERS, q9: "A", q10: ["E"], q11: ["A", "B", "C", "D", "E", "F"] } },
-    { name: "边界样本：高使用但聚焦认知", answers: { ...BASE_ANSWERS, q8: "B", q9: "D", q10: ["A", "B", "C"], q11: ["A"] } },
-    { name: "边界样本：重复机械刚需", answers: { ...BASE_ANSWERS, q12: "A" } },
-    { name: "边界样本：创意产出刚需", answers: { ...BASE_ANSWERS, q12: "B" } },
-    { name: "边界样本：复杂系统刚需", answers: { ...BASE_ANSWERS, q12: "C" } },
+    { name: "边界样本：全 A 经营画像", answers: { ...BASE_ANSWERS, q1: "A", q2: "A", q3: "A", q4: "A", q5: "A", q6: "A", q7: "A", q8: "A", q9: "A", q10: "A" } },
+    { name: "边界样本：全 B 经营画像", answers: { ...BASE_ANSWERS, q1: "B", q2: "B", q3: "B", q4: "B", q5: "B", q6: "B", q7: "B", q8: "B", q9: "B", q10: "B" } },
+    { name: "边界样本：全 D 经营画像", answers: { ...BASE_ANSWERS, q1: "D", q2: "D", q3: "D", q4: "D", q5: "D", q6: "D", q7: "D", q8: "D", q9: "D", q10: "D" } },
+    { name: "边界样本：纯人工但高使用时长", answers: { ...BASE_ANSWERS, q13: "D", q14: ["E"] } },
+    { name: "边界样本：高阶工具组合", answers: { ...BASE_ANSWERS, q12: "B", q13: "D", q14: ["A", "B", "C", "D"], q19: ["A", "B", "C", "D", "E", "F"] } },
+    { name: "边界样本：低使用但全景认知", answers: { ...BASE_ANSWERS, q13: "A", q14: ["E"], q19: ["A", "B", "C", "D", "E", "F"] } },
+    { name: "边界样本：高使用但聚焦认知", answers: { ...BASE_ANSWERS, q12: "B", q13: "D", q14: ["A", "B", "C"], q19: ["A"] } },
+    { name: "边界样本：重复执行刚需", answers: { ...BASE_ANSWERS, q20: "A" } },
+    { name: "边界样本：创意产出刚需", answers: { ...BASE_ANSWERS, q20: "B" } },
+    { name: "边界样本：复杂系统刚需", answers: { ...BASE_ANSWERS, q20: "E" } },
   ] satisfies Array<{ name: string; answers: Required<QuizAnswers> }>;
 }
 
@@ -362,10 +364,10 @@ function judgeSample(name: string, answers: Required<QuizAnswers>, result: Diagn
   if (result.operatorTypeName !== "平衡统筹型" && result.operatorType.secondaryTrait === result.operatorType.primaryTrait) {
     warnings.push("主倾向和辅助倾向重复，解释价值偏低。");
   }
-  if ((answers.q10 as QuizOptionValue[]).includes("E") && answers.q9 !== "A") {
+  if ((answers.q14 as QuizOptionValue[]).includes("E") && answers.q13 !== "A") {
     warnings.push("未使用工具与有效使用时长存在语义冲突，题目口径已收敛，规则层按未常态化使用工具处理。");
   }
-  if (answers.q9 === "A" && !(answers.q10 as QuizOptionValue[]).includes("E")) {
+  if (answers.q13 === "A" && !(answers.q14 as QuizOptionValue[]).includes("E")) {
     warnings.push("几乎不用 AI 但选择了常态化工具，存在轻微自我认知冲突。");
   }
   if (result.narrative.actionPlan.week.length < 12) {
@@ -395,13 +397,13 @@ function buildFindings(
     findings.push("经营类型硬规则通过：11 种类型均可达，平衡统筹型只在无显著维度偏差时出现。");
   }
   if (operatorStats.byType.size === EXPECTED_OPERATOR_TYPES.length) {
-    findings.push("经营类型覆盖完整：Q1-Q7 + Q13 的组合能覆盖全部 11 种类型。");
+    findings.push("经营类型覆盖完整：Q1-Q10 的组合能覆盖全部 11 种类型。");
   }
   if (questionInfluenceStats.dominanceWarnings.length > 0) {
     findings.push(`发现 ${questionInfluenceStats.dominanceWarnings.length} 个单题主导风险，说明顶部类型对部分单选题过于敏感。`);
   }
   if (adoptionStats.contradictions.length > 0) {
-    findings.push(`发现 ${adoptionStats.contradictions.length} 类 AI 使用时长与工具选择冲突组合；题目文案已从“使用 AI”收敛到“用于工作处理/进入日常工作”，规则层以 Q10 是否有常态化工具为准。`);
+    findings.push(`发现 ${adoptionStats.contradictions.length} 类 AI 使用时长与工具选择冲突组合；规则层以 Q14 是否有常态化工具为准。`);
   }
   if (cognitionStats.blindSpotLengths.has(3)) {
     findings.push("盲区数量上限生效：低认知宽度时最多展示 3 条盲区，避免负面清单过长。");
@@ -410,7 +412,7 @@ function buildFindings(
   if (lowScore.length > 0) {
     findings.push(`代表样本中有 ${lowScore.length} 个低于 4 分，主要问题集中在答案自相矛盾，而不是经营类型映射。`);
   }
-  findings.push("Q5/Q6/Q7 的新权重对顶部类型影响明显：投入心智和风险策略均能独立成为主类型，不再被旧竞争防守题干污染。");
+  findings.push("v3 改造：经营画像统一 4 选项去掉中间平衡选项，每维度 2 题；AI 落地画像新增 AI 边界认知、参照系、人机协作、预期价值、深度诊断意愿 5 道新题。");
   return findings;
 }
 
@@ -422,8 +424,8 @@ function writeReport(input: {
   cognitionStats: ReturnType<typeof scanCognitionWidth>;
   needStats: ReturnType<typeof scanJustNeed>;
   goldenStats: ReturnType<typeof scanGoldenCases>;
-  q10Combos: QuizOptionValue[][];
-  q11Combos: QuizOptionValue[][];
+  q14Combos: QuizOptionValue[][];
+  q19Combos: QuizOptionValue[][];
   judgedSamples: ReturnType<typeof judgeSample>[];
   findings: string[];
 }) {
@@ -431,7 +433,7 @@ function writeReport(input: {
   const lines = [
     "# 需求诊断结果合理性评估报告",
     "",
-    `评估日期：2026-05-31`,
+    `评估日期：2026-06-30`,
     "",
     "## 结论摘要",
     "",
@@ -440,11 +442,11 @@ function writeReport(input: {
     "## 评估方法",
     "",
     `- 逻辑总组合量：${formatNumber(input.totalLogicalCombinations)}。`,
-    "- 未逐份生成完整长报告；改用因子化穷举做硬规则体检。该诊断的经营类型、AI 落地阶段、认知宽度、刚需方向彼此由不同题组决定，因子化穷举能覆盖同等规则空间，成本低很多。",
-    `- Q1-Q7 + Q13 经营类型穷举：${input.operatorStats.total} 组。`,
-    `- Q8-Q10 AI 落地阶段穷举：${input.adoptionStats.total} 组，Q10 有效组合 ${input.q10Combos.length} 组。`,
-    `- Q11 认知宽度穷举：${input.cognitionStats.total} 组。`,
-    `- Q12 刚需方向穷举：${input.needStats.total} 组。`,
+    "- 因子化穷举覆盖经营类型、AI 落地阶段、认知宽度、刚需方向各因子，彼此独立穷举。",
+    `- Q1-Q10 经营类型穷举（3 代表值 × 10 题）：${input.operatorStats.total} 组。`,
+    `- Q12/Q13/Q14 AI 落地阶段穷举：${input.adoptionStats.total} 组，Q14 有效组合 ${input.q14Combos.length} 组。`,
+    `- Q19 认知宽度穷举：${input.cognitionStats.total} 组。`,
+    `- Q20 刚需方向穷举：${input.needStats.total} 组。`,
     `- Golden Set 回归：${input.goldenStats.length} 个关键样本。`,
     `- 代表样本审查：${input.judgedSamples.length} 份。`,
     "",
@@ -456,15 +458,15 @@ function writeReport(input: {
     "",
     "### AI 落地阶段分布",
     "",
-    tableFromMap(input.adoptionStats.byStage, "阶段", "Q8-Q10 组合数"),
+    tableFromMap(input.adoptionStats.byStage, "阶段", "Q12-Q14 组合数"),
     "",
     "### 认知宽度分布",
     "",
-    tableFromMap(input.cognitionStats.byWidth, "认知宽度", "Q11 组合数"),
+    tableFromMap(input.cognitionStats.byWidth, "认知宽度", "Q19 组合数"),
     "",
     "### 刚需方向覆盖",
     "",
-    tableFromMap(input.needStats.byNeed, "刚需方向", "Q12 组合数"),
+    tableFromMap(input.needStats.byNeed, "刚需方向", "Q20 组合数"),
     "",
     "### 单题主导风险",
     "",
@@ -482,12 +484,10 @@ function writeReport(input: {
     "",
     "## 风险与建议",
     "",
-    "- Q9/Q10 的矛盾风险已从题目侧做了收敛：Q9 问“把 AI 实际用于工作处理的时间”，Q10 问“哪些工具已经进入日常工作”。若仍出现“高时长 + 无工具”，规则层统一按 L1 处理，避免把未常态化工具的用户误判成高阶段。",
-    "- 组织落地维度已经从单题扩展到 Q4 + Q13，单题主导风险明显下降。后续如果还要继续提升可信度，优先考虑给判断方式、投入心智各补 1 题，而不是继续增加类型数量。",
-    "- Q1/Q2 仍然承担商业视野判断，其中 Q1 同时带有风险偏好和决策节奏成分。它目前没有造成硬规则错误，但如果后续追求更高诊断可信度，建议把商业视野改成更纯粹的业务深耕/业务拓展题。",
-    "- Q3-C 现在按平衡处理，使“平衡统筹型”真实可达；这是合理的，否则全 C 答案也会被强行判成经验判断型。",
-    "- Q5/Q6/Q7 重做后，投入心智和风险策略的结果更像企业 AI 落地诊断，不再像旧版竞争防守题。",
-    "- 代表样本低分项主要来自答案自述矛盾，不是类型命名或页面层级。后续优化应持续维护 Golden Set 回归样本，锁住每类企业主画像的预期输出。",
+    `- Q13/Q14 的矛盾风险：Q13 问"实际用于工作的时间"，Q14 问"已进入日常工作的工具"。若仍出现"高时长 + 无工具"，规则层统一按 L1 处理。`,
+    "- 4 选项去掉中间值后，每个维度 diff 最小非零值约 34%（B+B 或 C+C 组合），平衡统筹型只在两题精确抵消时出现（A+D 或 D+A 组合，diff=0）。",
+    "- v3 新增 AI 认知层题目（q16-q18）不直接参与经营画像评分，主要为叙事增强提供上下文。",
+    "- 如需提升经营画像可信度，建议给每个维度继续补第 3 道题，以降低单题噪音。",
     "",
     "## 低分样本",
     "",

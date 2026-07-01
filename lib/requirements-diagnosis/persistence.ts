@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { calculateDiagnosis, mergeNarrative } from "./scoring";
-import type { DiagnosisNarrative, DiagnosisResult, QuizAnswerValue, QuizAnswers, QuizOptionValue } from "./types";
+import type { DiagnosisNarrative, DiagnosisResult, QuizAnswers } from "./types";
 
 type StoredDiagnosis = {
   id: string;
@@ -84,41 +84,28 @@ export function fromDiagnosisRecord(record: StoredDiagnosis): DiagnosisRecordDto
 function repairStoredAnswers(answers: QuizAnswers): QuizAnswers {
   const repaired = { ...answers };
 
-  // q13 是组织落地维度的补题；旧记录没有这道题时，用 q4 的同维度倾向补齐，避免历史报告因题库升级而无法打开。
-  if (!repaired.q13 && isSingleAnswer(repaired.q4)) {
-    repaired.q13 = repaired.q4;
+  // v3 经营画像 q1-q10：全部是 4 选项单选，旧记录缺失或类型错误时补 B（偏左中间值）
+  for (const id of ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10"] as const) {
+    if (!repaired[id] || Array.isArray(repaired[id])) repaired[id] = "B";
   }
 
-  // v2 新增题目（q14–q24）：旧记录缺失时一律补 C（中间选项），避免因新题库导致旧报告 MISSING_Qxx。
-  // 同维度旧题可用时优先继承，确保经营画像维度均分不被 C 拉平。
-  if (!repaired.q14 && isSingleAnswer(repaired.q1)) repaired.q14 = repaired.q1;
-  else if (!repaired.q14) repaired.q14 = "C";
-
-  if (!repaired.q15 && isSingleAnswer(repaired.q3)) repaired.q15 = repaired.q3;
-  else if (!repaired.q15) repaired.q15 = "C";
-
-  if (!repaired.q16) repaired.q16 = isSingleAnswer(repaired.q3) ? repaired.q3 : "C";
-
-  if (!repaired.q17 && isSingleAnswer(repaired.q4)) repaired.q17 = repaired.q4;
-  else if (!repaired.q17) repaired.q17 = "C";
-
-  if (!repaired.q18 && isSingleAnswer(repaired.q5)) repaired.q18 = repaired.q5;
-  else if (!repaired.q18) repaired.q18 = "C";
-
-  if (!repaired.q19) repaired.q19 = isSingleAnswer(repaired.q5) ? repaired.q5 : "C";
-
-  if (!repaired.q20 && isSingleAnswer(repaired.q6)) repaired.q20 = repaired.q6;
-  else if (!repaired.q20) repaired.q20 = "C";
-
-  // AI 落地画像新题：旧记录没有任何 AI 态度信息时补中间值
-  if (!repaired.q21) repaired.q21 = "C";
-  if (!repaired.q22) repaired.q22 = "B";
-  if (!repaired.q23) repaired.q23 = "C";
-  if (!repaired.q24) repaired.q24 = "A";
+  // AI 落地画像单选题：默认值保持中间或保守值，避免误判落地阶段
+  if (!repaired.q11 || Array.isArray(repaired.q11)) repaired.q11 = "B"; // AI 态度：有兴趣
+  if (!repaired.q12 || Array.isArray(repaired.q12)) repaired.q12 = "B"; // 关注偏好：商业落地
+  if (!repaired.q13 || Array.isArray(repaired.q13)) repaired.q13 = "B"; // 使用时长：1-2h
+  // q14 是多选工具题，旧记录缺失时默认 [A]（基础聊天工具）
+  if (!repaired.q14 || !Array.isArray(repaired.q14)) repaired.q14 = ["A"];
+  if (!repaired.q15 || Array.isArray(repaired.q15)) repaired.q15 = "B"; // 工作流：个人临时
+  if (!repaired.q16 || Array.isArray(repaired.q16)) repaired.q16 = "A"; // AI 边界认知
+  if (!repaired.q17 || Array.isArray(repaired.q17)) repaired.q17 = "B"; // AI 参照系
+  if (!repaired.q18 || Array.isArray(repaired.q18)) repaired.q18 = "B"; // 人机协作
+  // q19 是多选认知宽度题，默认 [A, C] 给拓展认知计算时提供基础样本
+  if (!repaired.q19 || !Array.isArray(repaired.q19)) repaired.q19 = ["A", "C"];
+  if (!repaired.q20 || Array.isArray(repaired.q20)) repaired.q20 = "A"; // 刚需：重复执行
+  if (!repaired.q21 || Array.isArray(repaired.q21)) repaired.q21 = "A"; // 预期价值
+  if (!repaired.q22 || Array.isArray(repaired.q22)) repaired.q22 = "B"; // 落地偏好：模板复用
+  if (!repaired.q23 || Array.isArray(repaired.q23)) repaired.q23 = "A"; // 阻力：场景不清晰
+  if (!repaired.q24 || Array.isArray(repaired.q24)) repaired.q24 = "D"; // 深度诊断意愿：先试工具
 
   return repaired;
-}
-
-function isSingleAnswer(value: QuizAnswerValue | undefined): value is QuizOptionValue {
-  return Boolean(value) && !Array.isArray(value);
 }
