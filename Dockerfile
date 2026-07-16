@@ -83,8 +83,8 @@ COPY --chown=nextjs:nodejs entrypoint.sh ./entrypoint.sh
 
 # 赋予执行权限
 RUN chmod +x entrypoint.sh \
- && mkdir -p .workflow-data \
- && chown -R nextjs:nodejs .workflow-data
+ && mkdir -p .workflow-data .eve/sandbox-cache \
+ && chown -R nextjs:nodejs .workflow-data .eve
 
 # 切换到非 root 用户运行
 USER nextjs
