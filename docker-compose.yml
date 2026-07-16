@@ -10,7 +10,13 @@ services:
     environment:
       - NODE_ENV=production
       - AUTH_COOKIE_SECURE=false
+      - EVE_NEXT_PRODUCTION_PORT=4274
+    volumes:
+      - wish_creator_workflow_data:/app/.workflow-data
 
 networks:
   app-network:
     external: true
+
+volumes:
+  wish_creator_workflow_data:

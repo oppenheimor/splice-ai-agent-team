@@ -1,5 +1,8 @@
 .git
+.eve
 .next
+.output
+.workflow-data
 node_modules
 
 .env

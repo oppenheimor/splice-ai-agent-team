@@ -26,6 +26,7 @@ model User {
   creditAccount      CreditAccount?
   creditLedgerEntries CreditLedgerEntry[]
   agentUsageRecords  AgentUsageRecord[]
+  wishCreatorPublications WishCreatorPublication[]
 
   @@map("users")
 }
@@ -172,12 +173,34 @@ model AgentConversation {
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages       AgentMessage[]
   runs           AgentRun[]
+  wishCreatorPublications WishCreatorPublication[]
 
   @@index([userId, lastMessageAt])
   @@index([agentId, lastMessageAt])
   @@index([sessionId, lastMessageAt])
   @@index([visitorId, lastMessageAt])
   @@map("agent_conversations")
+}
+
+model WishCreatorPublication {
+  id                  String            @id @default(cuid())
+  userId              String            @map("user_id")
+  agentConversationId String            @map("agent_conversation_id")
+  conversationId      String            @map("conversation_id")
+  artifactPath        String            @map("artifact_path")
+  publishPath         String            @map("publish_path")
+  url                 String
+  bytes               Int
+  status              String
+  verification        String
+  createdAt           DateTime          @default(now()) @map("created_at")
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation        AgentConversation @relation(fields: [agentConversationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([conversationId, createdAt])
+  @@index([agentConversationId, createdAt])
+  @@map("wish_creator_publications")
 }
 
 model AgentMessage {

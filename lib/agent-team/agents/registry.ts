@@ -85,6 +85,23 @@ export const AGENTS: AgentManifest[] = [
     promptBuilder: "treasureHunt",
     memoryPolicy: { mode: "session" },
   },
+  {
+    id: "wish-creator",
+    name: "许愿池",
+    route: "/wish-creator",
+    category: "creation",
+    description: "用一句话生成、修改并发布可运行的单页网页。",
+    version: "0.1.0",
+    starterPrompts: [
+      "生成一个贪吃蛇小游戏。",
+      "生成一个卡比风格的今日吃什么页面。",
+      "生成一个极简习惯打卡页面。",
+    ],
+    tools: [],
+    rendererProfile: "default",
+    promptBuilder: "generic",
+    memoryPolicy: { mode: "session" },
+  },
 ];
 
 export function getAgentById(agentId: string | undefined | null): AgentManifest | undefined {

@@ -19,6 +19,11 @@
 
 # production
 /build
+/.output/
+
+# eve generated runtime state
+/.eve/
+/.workflow-data/
 
 # misc
 .DS_Store

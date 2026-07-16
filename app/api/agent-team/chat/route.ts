@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
 
     const result = streamText({
       model: deepseek(model),
-      system: systemMessages,
+      instructions: systemMessages,
       messages: await convertToModelMessages(compactUIMessages(messages), {
         tools,
         ignoreIncompleteToolCalls: true,
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
 
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
-      onFinish: async ({ messages: finishedMessages }) => {
+      onEnd: async ({ messages: finishedMessages }) => {
         const messagesToPersist = deepDiagnosisDecision
           ? withDeepDiagnosisValidationMetadata(finishedMessages, deepDiagnosisDecision)
           : finishedMessages;

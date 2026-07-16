@@ -1,4 +1,4 @@
-import { stepCountIs } from "ai";
+import { isStepCount } from "ai";
 
 export type AgentLoopConfig = {
   maxTurns: number;
@@ -27,5 +27,5 @@ export function resolveAgentLoopConfig(agentId: string | undefined): AgentLoopCo
 }
 
 export function buildAgentStopCondition(agentId: string | undefined) {
-  return stepCountIs(resolveAgentLoopConfig(agentId).maxTurns);
+  return isStepCount(resolveAgentLoopConfig(agentId).maxTurns);
 }

@@ -1,0 +1,10 @@
+packages:
+  - '.'
+
+allowBuilds:
+  '@mongodb-js/zstd': true
+  '@prisma/engines': true
+  node-liblzma: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true

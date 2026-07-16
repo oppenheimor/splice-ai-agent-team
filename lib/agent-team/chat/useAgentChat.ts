@@ -303,7 +303,7 @@ export function useAgentChat(agent: AgentManifest, options: UseAgentChatOptions 
       await deleteDatabaseConversation(agent.id, conversationId);
       const rest = await fetchDatabaseConversations(agent.id);
       const nextSummary = rest[0] || null;
-      const next = nextSummary ? await fetchDatabaseConversation(agent.id, nextSummary.id) || nextSummary : null;
+      const next = nextSummary ? (await fetchDatabaseConversation(agent.id, nextSummary.id)) || nextSummary : null;
       setConversations(rest);
       setActiveConversation(next);
       setMessages(next?.messages || []);
