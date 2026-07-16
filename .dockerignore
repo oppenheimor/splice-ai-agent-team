@@ -1,7 +1,14 @@
 .git
+.agents
+.codex
 .eve
+.github
+.hermes
+.impeccable
 .next
 .output
+.planning
+.workbuddy
 .workflow-data
 node_modules
 
@@ -9,8 +16,12 @@ node_modules
 .env.local
 .env.example
 
+AGENTS.md
 Dockerfile
 docker-compose*.yml
+
+artifacts
+docs
 
 npm-debug.log*
 pnpm-debug.log*

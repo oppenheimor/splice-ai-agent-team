@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 # ── 全局环境 ──
 env:
   REGISTRY: splice-ai-cn-shanghai.cr.volces.com
@@ -47,14 +51,15 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H '${{ secrets.SERVER_HOST }}' >> ~/.ssh/known_hosts
 
-      # ── 5. 校验并上传 compose ──
-      - name: Upload compose file
+      # ── 5. 校验并上传部署文件 ──
+      - name: Upload deployment files
         run: |
           test -f docker-compose.yml || (echo "❌ docker-compose.yml not found" && exit 1)
+          test -f scripts/deploy-production.sh || (echo "❌ deploy script not found" && exit 1)
           ssh -i ~/.ssh/deploy_key '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}' \
             'mkdir -p /home/deploy/agent-team'
-          scp -i ~/.ssh/deploy_key docker-compose.yml \
-            '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/deploy/agent-team/docker-compose.yml'
+          scp -i ~/.ssh/deploy_key docker-compose.yml scripts/deploy-production.sh \
+            '${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/deploy/agent-team/'
 
       # ── 6. 在服务器上直接写入 .env（不落本地磁盘） ──
       - name: Write production env on server
@@ -80,16 +85,8 @@ jobs:
             printf '%s' '${{ secrets.VOLCENGINE_CR_PASSWORD }}' \
               | docker login ${{ env.REGISTRY }} \
                   -u '${{ secrets.VOLCENGINE_CR_USERNAME }}' \
-                  --password-stdin || true
+                  --password-stdin
 
-            docker compose -f docker-compose.yml pull
-            docker compose -f docker-compose.yml up -d --remove-orphans
-
-            # 简单健康检查
-            sleep 10
-            docker compose -f docker-compose.yml ps | grep -i 'unhealthy' && {
-              echo "❌ 容器健康检查失败"; exit 1;
-            }
-
-            docker image prune -af --filter "until=24h"
+            bash ./deploy-production.sh \
+              '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}'
           REMOTE
