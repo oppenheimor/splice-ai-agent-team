@@ -33,6 +33,16 @@ const agents = [
     hoverShadow: "inset 0 -4px 12px rgba(0,0,0,0.1), 0 16px 32px rgba(255, 59, 124, 0.25)",
     hoverColor: "#ff3b7c"
   },
+  {
+    name: "许愿池",
+    suffix: "Agent",
+    href: "/wish-creator",
+    meta: "网页创作 / 在线发布",
+    description: "说出一个愿望，让 Agent 把它变成可运行的页面。",
+    orbStyle: { background: "#0b100d url('/agent-team/wish-creator/wish-creator-logo.png') center/cover no-repeat" },
+    hoverShadow: "inset 0 -4px 12px rgba(0,0,0,0.18), 0 16px 32px rgba(183, 255, 43, 0.28)",
+    hoverColor: "#72a800"
+  },
 ] as const;
 
 export default async function Home() {
@@ -104,7 +114,7 @@ export default async function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 relative z-10">
           {agents.map((agent, index) => (
             <Link
               key={agent.href}

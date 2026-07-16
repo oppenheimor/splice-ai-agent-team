@@ -1,3 +1,5 @@
+import { withEve } from "eve/next";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   basePath: "/agent-team",
@@ -5,4 +7,4 @@ const nextConfig = {
   allowedDevOrigins: ['10.9.89.174'],
 };
 
-export default nextConfig;
+export default withEve(nextConfig);
