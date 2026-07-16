@@ -3,6 +3,7 @@ services:
     image: splice-ai-cn-shanghai.cr.volces.com/splice-ai/agent-team-nextjs:latest
     container_name: agent-team-nextjs
     restart: always
+    stop_grace_period: 30s
     networks:
       - app-network
     env_file:
@@ -13,6 +14,7 @@ services:
       - EVE_NEXT_PRODUCTION_PORT=4274
     volumes:
       - wish_creator_workflow_data:/app/.workflow-data
+      - wish_creator_sandbox_data:/app/.eve/sandbox-cache
 
 networks:
   app-network:
@@ -20,3 +22,4 @@ networks:
 
 volumes:
   wish_creator_workflow_data:
+  wish_creator_sandbox_data:

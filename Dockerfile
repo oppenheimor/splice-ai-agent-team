@@ -2,12 +2,15 @@
 # Stage 1: 构建阶段（builder）
 # 用于安装依赖、生成 Prisma Client、构建 Next.js 应用
 #####################################
-FROM m.daocloud.io/docker.io/library/node:24-alpine AS builder
+FROM m.daocloud.io/docker.io/library/node:24-bookworm AS builder
 
 # 设置工作目录
 WORKDIR /app
 
-# 仅复制包管理相关文件，提高缓存利用率
+# 官方 Bookworm 完整镜像已包含 Python、gcc、g++、make 与 liblzma-dev，
+# Eve 的 Node 原生扩展可以直接编译，无需在发布时安装系统工具链。
+
+# 仅复制包管理相关文件，提高依赖安装层的缓存利用率
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # 使用国内 npm 镜像，加速依赖安装
@@ -16,13 +19,9 @@ ENV npm_config_registry=https://registry.npmmirror.com
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 
-# Eve 的依赖包含 Node 原生扩展；编译工具只留在 builder，运行镜像不携带。
-RUN apk add --no-cache python3 make g++ xz-dev
-
 # 启用 Corepack，并激活仓库锁定的 pnpm 版本
-# BuildKit 缓存会跨失败重试保留已下载包；显式 registry 避免锁文件安装回落到官方源。
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    corepack enable \
+# 使用普通 Docker 层缓存，兼容未启用 BuildKit 的 self-hosted runner。
+RUN corepack enable \
  && corepack prepare pnpm@11.13.1 --activate \
  && pnpm config set registry https://registry.npmmirror.com \
  && pnpm config set store-dir /pnpm/store \
@@ -45,7 +44,7 @@ RUN pnpm build \
 # Stage 2: 运行阶段（runner）
 # 仅包含运行时所需的最小内容
 #####################################
-FROM m.daocloud.io/docker.io/library/node:24-alpine AS runner
+FROM m.daocloud.io/docker.io/library/node:24-bookworm-slim AS runner
 
 # 设置运行时工作目录
 WORKDIR /app
@@ -55,12 +54,11 @@ ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
-# node-liblzma 在构建阶段链接 Alpine 的 liblzma，运行时仅需共享库。
-RUN apk add --no-cache xz-libs
+# Bookworm slim 已包含 node-liblzma 运行所需的 liblzma5 共享库。
 
 # 创建非 root 用户，增强安全性
-RUN addgroup --system --gid 1001 nodejs \
- && adduser --system --uid 1001 nextjs
+RUN groupadd --system --gid 1001 nodejs \
+ && useradd --system --uid 1001 --gid nodejs nextjs
 
 # 从 builder 阶段复制 Next.js standalone 输出
 # standalone 模式可减少对 node_modules 的依赖
@@ -85,8 +83,8 @@ COPY --chown=nextjs:nodejs entrypoint.sh ./entrypoint.sh
 
 # 赋予执行权限
 RUN chmod +x entrypoint.sh \
- && mkdir -p .workflow-data \
- && chown -R nextjs:nodejs .workflow-data
+ && mkdir -p .workflow-data .eve/sandbox-cache \
+ && chown -R nextjs:nodejs .workflow-data .eve
 
 # 切换到非 root 用户运行
 USER nextjs
