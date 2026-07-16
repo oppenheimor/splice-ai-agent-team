@@ -1,6 +1,6 @@
 services:
   nextjs:
-    image: splice-ai-cn-shanghai.cr.volces.com/splice-ai/agent-team-nextjs:latest
+    image: ${AGENT_TEAM_IMAGE:-splice-ai-cn-shanghai.cr.volces.com/splice-ai/agent-team-nextjs:latest}
     container_name: agent-team-nextjs
     restart: always
     stop_grace_period: 30s
@@ -15,6 +15,18 @@ services:
     volumes:
       - wish_creator_workflow_data:/app/.workflow-data
       - wish_creator_sandbox_data:/app/.eve/sandbox-cache
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          Promise.all([fetch('http://127.0.0.1:4274/eve/v1/health'),fetch('http://127.0.0.1:3000/agent-team/',{redirect:'manual'})]).then(([eve,next])=>process.exit(eve.ok&&next.status<500?0:1)).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      # Eve 的 sandbox 模板锁恢复窗口最长 15 分钟；健康检查成功后会提前结束启动期。
+      start_period: 16m
 
 networks:
   app-network:
