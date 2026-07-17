@@ -1,0 +1,88 @@
+name: Validate GitHub-hosted Build
+
+on:
+  # 新增或修改本验证流程时，在 PR 中先完成一次真实链路验证。
+  pull_request:
+    paths:
+      - .github/workflows/validate-hosted-build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: splice-ai-cn-shanghai.cr.volces.com
+  IMAGE_NAME: splice-ai/agent-team-nextjs
+  PROBE_TAG: ci-probe-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+jobs:
+  build-and-push-probe:
+    name: Build and push probe image
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Volcengine CR
+        run: |
+          set -euo pipefail
+          printf '%s' '${{ secrets.VOLCENGINE_CR_PASSWORD }}' \
+            | docker login "${REGISTRY}" \
+              -u '${{ secrets.VOLCENGINE_CR_USERNAME }}' \
+              --password-stdin
+
+      - name: Build probe image
+        id: build
+        run: |
+          set -euo pipefail
+          image="${REGISTRY}/${IMAGE_NAME}:${PROBE_TAG}"
+          started_at=${SECONDS}
+
+          docker build --tag "${image}" .
+
+          duration=$((SECONDS - started_at))
+          echo "duration=${duration}" >> "${GITHUB_OUTPUT}"
+          echo "image=${image}" >> "${GITHUB_OUTPUT}"
+
+      - name: Push probe image with retry
+        id: push
+        run: |
+          set -euo pipefail
+          image='${{ steps.build.outputs.image }}'
+          started_at=${SECONDS}
+
+          # 跨境上传可能发生瞬时抖动；重试只处理网络波动，不掩盖持续性故障。
+          for attempt in 1 2 3; do
+            if docker push "${image}"; then
+              duration=$((SECONDS - started_at))
+              echo "duration=${duration}" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+
+            if [ "${attempt}" -eq 3 ]; then
+              echo "镜像连续三次推送失败，GitHub 托管 Runner 到火山引擎链路暂不满足发布要求。" >&2
+              exit 1
+            fi
+
+            wait_seconds=$((attempt * 15))
+            echo "第 ${attempt} 次推送失败，${wait_seconds} 秒后重试。" >&2
+            sleep "${wait_seconds}"
+          done
+
+      - name: Write validation summary
+        if: success()
+        run: |
+          cat >> "${GITHUB_STEP_SUMMARY}" <<'EOF'
+          ## GitHub 托管构建链路验证成功
+
+          - 镜像：`${{ steps.build.outputs.image }}`
+          - 构建耗时：`${{ steps.build.outputs.duration }}` 秒
+          - 推送耗时（含重试等待）：`${{ steps.push.outputs.duration }}` 秒
+          - 说明：本流程未覆盖 `latest` 标签，也未连接或部署生产服务器。
+          EOF
+
+      - name: Logout from Volcengine CR
+        if: always()
+        run: docker logout "${REGISTRY}" || true
