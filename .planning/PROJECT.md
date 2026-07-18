@@ -50,7 +50,7 @@
 - **Routing**: 保持 `/agent-team` basePath - 当前部署和路由都依赖它
 - **Auth**: 先保留轻量 session 模型 - 方便继续迭代，不先引入复杂身份系统
 - **Chat state**: 短期仍以 localStorage 为主 - 先把体验打通，再考虑服务端同步
-- **Deployment**: 继续兼容当前 Docker + GitHub Actions 方案 - 先不动发布链路
+- **Deployment**: 使用火山引擎托管构建和国内镜像仓库，生产服务器只负责拉取不可变镜像并通过 Docker Compose 切换容器；旧 GitHub Actions 自托管 Runner 发布链路已经退役
 
 ## Key Decisions
 

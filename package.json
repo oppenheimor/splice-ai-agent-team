@@ -12,6 +12,7 @@
     "build": "eve build && next build",
     "start": "next start",
     "test:wish-creator": "node --test lib/wish-creator/*.test.ts",
+    "test:deploy": "bash tests/deploy-production-config.test.sh && bash tests/deploy-from-volcengine.test.sh && bash tests/deploy-production-nginx-reload.test.sh && bash tests/deploy-production-image-retention.test.sh",
     "typecheck": "tsc --noEmit",
     "eve:build": "eve build",
     "eve:start": "eve start",

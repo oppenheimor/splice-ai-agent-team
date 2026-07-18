@@ -1,0 +1,4 @@
+# 每行一个生产启动必需变量名，不允许填写真实值。
+DATABASE_URL
+APPLICATION_SECRET
+

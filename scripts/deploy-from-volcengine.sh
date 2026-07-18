@@ -5,6 +5,7 @@ set -euo pipefail
 # 临时目录，避免并发任务互相覆盖，也避免在工作区残留私钥和 known_hosts。
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
+required_env_file="$repo_root/deploy/required-env.txt"
 ssh_dir="$(mktemp -d "${TMPDIR:-/tmp}/splice-ai-deploy.XXXXXX")"
 ssh_key_path="$ssh_dir/deploy_key"
 known_hosts_path="$ssh_dir/known_hosts"
@@ -44,6 +45,22 @@ cd "$repo_root"
 
 test -f docker-compose.yml
 test -f scripts/deploy-production.sh
+test -f "$required_env_file"
+
+required_env_names=()
+while IFS= read -r variable_name || [[ -n "$variable_name" ]]; do
+  [[ -z "$variable_name" || "$variable_name" == \#* ]] && continue
+  if [[ ! "$variable_name" =~ ^[A-Z][A-Z0-9_]*$ ]]; then
+    echo "非法生产环境变量名：$variable_name" >&2
+    exit 1
+  fi
+  required_env_names+=("$variable_name")
+done < "$required_env_file"
+
+if (( ${#required_env_names[@]} == 0 )); then
+  echo "deploy/required-env.txt 至少需要登记一个生产环境变量" >&2
+  exit 1
+fi
 
 image_ref="${image_repository}:${image_tag}"
 deploy_target="${SERVER_USER}@${SERVER_HOST}"
@@ -85,21 +102,22 @@ echo "部署前检查镜像：$image_ref"
 # 部署前只验证生产配置、Docker 运行时和镜像权限，不修改服务器状态或下载镜像。
 ssh "${ssh_options[@]}" \
   "$deploy_target" \
-  bash -s -- "$image_ref" "$production_env_file" "$production_network" <<'PREFLIGHT'
+  bash -s -- \
+  "$image_ref" \
+  "$production_env_file" \
+  "$production_network" \
+  "${required_env_names[@]}" <<'PREFLIGHT'
 set -euo pipefail
 
 image_ref="$1"
 env_file="$2"
 production_network="$3"
+shift 3
 
 test -f "$env_file"
 test -r "$env_file"
 
-for variable_name in \
-  DEEPSEEK_API_KEY \
-  DATABASE_URL \
-  TAVILY_API_KEY
-do
+for variable_name in "$@"; do
   variable_value="$(
     sed -n "s/^[[:space:]]*${variable_name}=//p" "$env_file" |
       tail -n 1 |

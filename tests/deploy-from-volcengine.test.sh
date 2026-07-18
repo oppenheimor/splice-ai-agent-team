@@ -71,6 +71,9 @@ grep -qF "deployed-image=splice-ai-cn-shanghai.cr.volces.com/splice-ai/agent-tea
 grep -qF 'docker-compose.yml' "$command_log"
 grep -qF 'scripts/deploy-production.sh' "$command_log"
 grep -qF 'deploy@server.example:/home/deploy/agent-team/' "$command_log"
+grep -qF 'DEEPSEEK_API_KEY' "$command_log"
+grep -qF 'DATABASE_URL' "$command_log"
+grep -qF 'TAVILY_API_KEY' "$command_log"
 
 ssh_call_count="$(grep -c '^ssh ' "$command_log")"
 if [[ "$ssh_call_count" != "2" ]]; then
