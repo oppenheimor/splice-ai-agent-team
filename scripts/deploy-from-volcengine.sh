@@ -32,12 +32,12 @@ if [[ ! "$SCM_COMMIT_ID" =~ ^[0-9a-fA-F]{40}$ ]]; then
   exit 1
 fi
 
-# 迁移期间继续兼容旧的纯 commit SHA 标签。新流水线会显式传入
-# <commit SHA>-<pipeline run ID>，从而让同一 commit 的每次构建都有独立版本。
+# 迁移期间继续兼容旧的纯 commit SHA 和流水线运行 ID 标签。当前流水线使用
+# 火山镜像构建任务明确支持的 DATETIME，避免同一 commit 的并发构建覆盖标签。
 image_tag="${DEPLOY_IMAGE_TAG:-$SCM_COMMIT_ID}"
 if [[ "$image_tag" != "$SCM_COMMIT_ID" &&
-      ! "$image_tag" =~ ^${SCM_COMMIT_ID}-[0-9a-fA-F]{32}$ ]]; then
-  echo "DEPLOY_IMAGE_TAG 必须是当前 commit SHA，或当前 commit SHA 加 32 位流水线运行 ID" >&2
+      ! "$image_tag" =~ ^${SCM_COMMIT_ID}-([0-9]{14}|[0-9a-fA-F]{32})$ ]]; then
+  echo "DEPLOY_IMAGE_TAG 必须是当前 commit SHA，或当前 commit SHA 加 14 位构建时间" >&2
   exit 1
 fi
 

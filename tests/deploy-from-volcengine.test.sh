@@ -81,8 +81,8 @@ if [[ "$ssh_call_count" != "2" ]]; then
   exit 1
 fi
 
-pipeline_run_id="89abcdef0123456789abcdef01234567"
-release_tag="${commit_sha}-${pipeline_run_id}"
+build_datetime="20260719042105"
+release_tag="${commit_sha}-${build_datetime}"
 : > "$command_log"
 
 SERVER_HOST=server.example \
@@ -100,7 +100,7 @@ if SERVER_HOST=server.example \
   SERVER_USER=deploy \
   SERVER_SSH_KEY="$server_ssh_key" \
   SCM_COMMIT_ID="$commit_sha" \
-  DEPLOY_IMAGE_TAG="ffffffffffffffffffffffffffffffffffffffff-${pipeline_run_id}" \
+  DEPLOY_IMAGE_TAG="ffffffffffffffffffffffffffffffffffffffff-${build_datetime}" \
   PATH="$mock_bin:$PATH" \
   COMMAND_LOG="$command_log" \
   bash "$script_path" >"$temp_dir/mismatched-release.log" 2>&1; then
@@ -109,5 +109,16 @@ if SERVER_HOST=server.example \
 fi
 
 grep -qF 'DEPLOY_IMAGE_TAG 必须是当前 commit SHA' "$temp_dir/mismatched-release.log"
+
+# 迁移前已经发布的 32 位流水线运行 ID 标签仍可用于回滚。
+legacy_pipeline_run_id="89abcdef0123456789abcdef01234567"
+SERVER_HOST=server.example \
+  SERVER_USER=deploy \
+  SERVER_SSH_KEY="$server_ssh_key" \
+  SCM_COMMIT_ID="$commit_sha" \
+  DEPLOY_IMAGE_TAG="${commit_sha}-${legacy_pipeline_run_id}" \
+  PATH="$mock_bin:$PATH" \
+  COMMAND_LOG="$command_log" \
+  bash "$script_path" >"$temp_dir/legacy-release.log"
 
 echo "deploy-from-volcengine-ok"
