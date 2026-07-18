@@ -31,12 +31,21 @@ if [[ ! "$SCM_COMMIT_ID" =~ ^[0-9a-fA-F]{40}$ ]]; then
   exit 1
 fi
 
+# 迁移期间继续兼容旧的纯 commit SHA 标签。新流水线会显式传入
+# <commit SHA>-<pipeline run ID>，从而让同一 commit 的每次构建都有独立版本。
+image_tag="${DEPLOY_IMAGE_TAG:-$SCM_COMMIT_ID}"
+if [[ "$image_tag" != "$SCM_COMMIT_ID" &&
+      ! "$image_tag" =~ ^${SCM_COMMIT_ID}-[0-9a-fA-F]{32}$ ]]; then
+  echo "DEPLOY_IMAGE_TAG 必须是当前 commit SHA，或当前 commit SHA 加 32 位流水线运行 ID" >&2
+  exit 1
+fi
+
 cd "$repo_root"
 
 test -f docker-compose.yml
 test -f scripts/deploy-production.sh
 
-image_ref="${image_repository}:${SCM_COMMIT_ID}"
+image_ref="${image_repository}:${image_tag}"
 deploy_target="${SERVER_USER}@${SERVER_HOST}"
 
 # SERVER_SSH_KEY 保存的是单行 Base64。解码后只验证私钥格式，不输出私钥内容。

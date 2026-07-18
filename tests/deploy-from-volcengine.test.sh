@@ -78,4 +78,33 @@ if [[ "$ssh_call_count" != "2" ]]; then
   exit 1
 fi
 
+pipeline_run_id="89abcdef0123456789abcdef01234567"
+release_tag="${commit_sha}-${pipeline_run_id}"
+: > "$command_log"
+
+SERVER_HOST=server.example \
+  SERVER_USER=deploy \
+  SERVER_SSH_KEY="$server_ssh_key" \
+  SCM_COMMIT_ID="$commit_sha" \
+  DEPLOY_IMAGE_TAG="$release_tag" \
+  PATH="$mock_bin:$PATH" \
+  COMMAND_LOG="$command_log" \
+  bash "$script_path" >"$temp_dir/unique-release.log"
+
+grep -qF "deployed-image=splice-ai-cn-shanghai.cr.volces.com/splice-ai/agent-team-nextjs:${release_tag}" "$temp_dir/unique-release.log"
+
+if SERVER_HOST=server.example \
+  SERVER_USER=deploy \
+  SERVER_SSH_KEY="$server_ssh_key" \
+  SCM_COMMIT_ID="$commit_sha" \
+  DEPLOY_IMAGE_TAG="ffffffffffffffffffffffffffffffffffffffff-${pipeline_run_id}" \
+  PATH="$mock_bin:$PATH" \
+  COMMAND_LOG="$command_log" \
+  bash "$script_path" >"$temp_dir/mismatched-release.log" 2>&1; then
+  echo "不属于当前 commit 的发布版本必须阻止部署" >&2
+  exit 1
+fi
+
+grep -qF 'DEPLOY_IMAGE_TAG 必须是当前 commit SHA' "$temp_dir/mismatched-release.log"
+
 echo "deploy-from-volcengine-ok"
