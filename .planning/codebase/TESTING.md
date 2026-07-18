@@ -60,7 +60,7 @@ For `app/treasure/hunt/page.tsx`:
 - No component tests for `ChoiceTool` and tool-output continuation.
 - No E2E tests for login -> protected page -> chat flow.
 - No regression tests around `basePath: "/agent-team"` URL construction.
-- No deployment smoke test beyond Docker Compose health check in `.github/workflows/deploy.yml`.
+- Deployment script tests cover Nginx reload ordering and scoped image retention. The production release additionally checks candidate Eve/Next health, Prisma migration, formal container health, and the Nginx upstream.
 
 ## Recommended Next Testing Steps
 

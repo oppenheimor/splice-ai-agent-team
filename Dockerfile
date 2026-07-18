@@ -28,7 +28,7 @@ ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 
 # 启用 Corepack，并激活仓库锁定的 pnpm 版本
-# 使用普通 Docker 层缓存，兼容未启用 BuildKit 的 self-hosted runner。
+# 依赖安装保持为普通 Docker 层，供托管构建服务复用缓存。
 RUN corepack enable \
  && corepack prepare pnpm@11.13.1 --activate \
  && pnpm config set registry https://registry.npmmirror.com \

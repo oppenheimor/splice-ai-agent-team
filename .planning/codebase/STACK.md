@@ -1,5 +1,5 @@
 ---
-last_mapped: 2026-05-25
+last_mapped: 2026-07-19
 focus: tech
 ---
 
@@ -11,7 +11,7 @@ This is a TypeScript Next.js application for a specialized Agent Team platform. 
 
 ## Runtime
 
-- **Node.js**: Docker production image uses `node:20-alpine` in `Dockerfile`.
+- **Node.js**: Docker production image uses Node.js 24 on Debian Bookworm.
 - **Package manager**: `pnpm`, locked by `pnpm-lock.yaml`; `.npmrc` is present.
 - **Framework**: Next.js `16.2.6` with App Router under `app/`.
 - **React**: React `19.2.4` and React DOM `19.2.4`.
@@ -61,16 +61,18 @@ This is a TypeScript Next.js application for a specialized Agent Team platform. 
   - `pnpm start` -> `next start`
   - `pnpm lint` -> `eslint`
   - `pnpm db:generate`, `pnpm db:migrate`, `pnpm db:studio` for Prisma
-- `Dockerfile` performs a two-stage standalone Next.js build.
-- `entrypoint.sh` starts `node server.js`.
+- `Dockerfile` uses source, builder, and runtime stages. The runtime includes the `.dockerignore`-filtered authored source needed by Eve, Next.js standalone output, production dependencies, and Prisma CLI.
+- `entrypoint.sh` starts Eve, waits for sandbox prewarm and health, then starts the standalone Next.js server; either process exiting terminates the container.
 - `docker-compose.yml` runs the production image from Volcengine Container Registry.
 - `docker-compose.dev.yml` runs local PostgreSQL 17 on port 5432.
-- `.github/workflows/deploy.yml` builds and pushes Docker images on `main`, uploads compose config, writes production env on the server, and runs `docker compose up -d`.
+- Volcengine Code Pipeline builds immutable commit-tagged images from GitHub `main`, uploads the Compose and deployment scripts, and invokes `scripts/deploy-production.sh` over SSH.
+- Production runtime variables are loaded from `/home/deploy/agent-team/.env`; GitHub Secrets are not part of the active release path.
 
 ## Configuration
 
 - `.env.example` defines:
   - `DEEPSEEK_API_KEY=`
+  - `TAVILY_API_KEY=`
   - `DATABASE_URL="postgresql://postgres:postgres@localhost:5432/splice_agent_team?schema=public"`
 - `lib/db/prisma.ts` includes a fallback development connection string ending in `splice_agent_team_missing_database_url`; this avoids immediate undefined env access but can obscure missing `DATABASE_URL` until runtime DB calls fail.
 

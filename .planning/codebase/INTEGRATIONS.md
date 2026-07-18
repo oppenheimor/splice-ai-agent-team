@@ -1,5 +1,5 @@
 ---
-last_mapped: 2026-05-25
+last_mapped: 2026-07-19
 focus: tech
 ---
 
@@ -7,7 +7,7 @@ focus: tech
 
 ## Summary
 
-The codebase has three active integration surfaces: DeepSeek through Vercel AI SDK, PostgreSQL through Prisma, and production Docker deployment through GitHub Actions plus Volcengine Container Registry. Browser-side chat persistence is localStorage and is not currently server-synced.
+The codebase has active integration surfaces for DeepSeek through Vercel AI SDK, Tavily web search, PostgreSQL through Prisma, Eve sandbox execution, and production Docker deployment through Volcengine Code Pipeline plus Volcengine Container Registry.
 
 ## DeepSeek Model Provider
 
@@ -25,7 +25,7 @@ The codebase has three active integration surfaces: DeepSeek through Vercel AI S
 ## PostgreSQL
 
 - Local development database is defined in `docker-compose.dev.yml`.
-- Production database URL is injected in `.github/workflows/deploy.yml` from `DATABASE_URL_PRODUCTION`.
+- Production database URL is stored in `/home/deploy/agent-team/.env` and loaded by Docker Compose at runtime.
 - Prisma datasource provider is PostgreSQL in `prisma/schema.prisma`.
 - The only persisted domain data today is auth:
   - `users`
@@ -50,22 +50,21 @@ The codebase has three active integration surfaces: DeepSeek through Vercel AI S
 
 - Registry: `splice-ai-cn-shanghai.cr.volces.com`.
 - Image name: `splice-ai/agent-team-nextjs`.
-- `.github/workflows/deploy.yml` runs on pushes to `main`.
-- Runner labels: `self-hosted`, `agent-team`.
+- A Volcengine Code Pipeline watches GitHub `main`, builds the immutable commit-tagged image on managed build resources, and deploys it over SSH.
+- Production deployment no longer depends on a GitHub self-hosted Runner.
 - Remote deploy directory: `/home/deploy/agent-team`.
 - `docker-compose.yml` expects an external Docker network named `app-network`.
+- `scripts/deploy-production.sh` gates the switch with candidate prewarm, Prisma migration, container health, and Nginx upstream verification.
 
-## External Secrets
+## Production Configuration
 
-Configured through GitHub Actions secrets:
+Application runtime secrets are stored only in `/home/deploy/agent-team/.env`:
 
-- `VOLCENGINE_CR_PASSWORD`
-- `VOLCENGINE_CR_USERNAME`
-- `SERVER_SSH_KEY`
-- `SERVER_HOST`
-- `SERVER_USER`
-- `DEEPSEEK_API_KEY_PRODUCTION`
-- `DATABASE_URL_PRODUCTION`
+- `DEEPSEEK_API_KEY`
+- `DATABASE_URL`
+- `TAVILY_API_KEY`
+
+The Volcengine pipeline keeps `SERVER_HOST`, `SERVER_USER`, and `SERVER_SSH_KEY` as connection variables. They are not injected into the application container. Operational changes and rollback are documented in `docs/生产回滚操作手册.md`.
 
 Do not copy any actual secret values into planning docs or logs.
 

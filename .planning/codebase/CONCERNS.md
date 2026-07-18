@@ -51,20 +51,21 @@ Risk: UX and cost behavior may be unpredictable under real user load.
 
 Risk: malformed tool output can fail visually or silently without compile-time protection.
 
-## Deployment Has No Rollback Yet
+## Deployment Rollback Is Manual
 
-- `TODO.md` explicitly lists blue/green deployment, rollback, deployment notifications, and Docker Secrets/Vault as pending.
-- `.github/workflows/deploy.yml` deploys `latest` via Docker Compose and prunes old images after 24h.
+- Production keeps the current image and two recent historical immutable images.
+- `docs/生产回滚操作手册.md` defines the standard image rollback and environment-variable procedures.
+- The deployment script does not automatically restore the previous image after a post-switch failure because database migrations may make blind rollback unsafe.
 
-Risk: production recovery depends on manual intervention if a bad image is deployed.
+Risk: an operator must select a known-good image and confirm database compatibility. Migrations must follow expand/contract until automated rollback semantics are designed.
 
-## Docker/Prisma Build Mismatch
+## Runtime Image Is Large
 
-- `Dockerfile` comments show Prisma generate/schema copy steps are currently disabled.
-- The app imports `@prisma/client` and uses Prisma at runtime.
-- Production standalone output plus copied `node_modules` may work if the client is already generated during install/build, but the disabled generate step is a risk area.
+- Eve needs authored source and its server build output at runtime.
+- The deployment migration gate also needs Prisma CLI and production dependencies in the image.
+- Copying the complete pruned `node_modules` keeps the release reliable but produces an image around 1.9 GB.
 
-Risk: production image can fail at runtime if Prisma client generation or schema availability is incomplete.
+Risk: registry storage, pull time, and local rollback retention consume significant disk. Optimize only after proving Eve and migration runtime dependencies can be split safely.
 
 ## Documentation Drift
 

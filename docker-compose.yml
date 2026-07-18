@@ -1,6 +1,6 @@
 services:
   nextjs:
-    image: ${AGENT_TEAM_IMAGE:-splice-ai-cn-shanghai.cr.volces.com/splice-ai/agent-team-nextjs:latest}
+    image: ${AGENT_TEAM_IMAGE:?必须通过 AGENT_TEAM_IMAGE 指定不可变镜像版本}
     container_name: agent-team-nextjs
     restart: always
     stop_grace_period: 30s
@@ -10,7 +10,6 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - AUTH_COOKIE_SECURE=false
       - EVE_NEXT_PRODUCTION_PORT=4274
     volumes:
       - wish_creator_workflow_data:/app/.workflow-data

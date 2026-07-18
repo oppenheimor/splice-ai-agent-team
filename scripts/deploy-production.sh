@@ -138,7 +138,6 @@ docker run -d \
   --name "$candidate_container" \
   --env-file .env \
   --env NODE_ENV=production \
-  --env AUTH_COOKIE_SECURE=false \
   --env EVE_NEXT_PRODUCTION_PORT=4274 \
   --network app-network \
   "$image_ref" >/dev/null
