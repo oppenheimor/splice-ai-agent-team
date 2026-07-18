@@ -5,6 +5,7 @@ image_ref="${1:?用法: deploy-production.sh <不可变镜像引用>}"
 compose_file="${COMPOSE_FILE:-docker-compose.yml}"
 candidate_container="agent-team-nextjs-candidate"
 production_container="agent-team-nextjs"
+reverse_proxy_container="${REVERSE_PROXY_CONTAINER:-nginx}"
 
 cleanup_candidate() {
   docker rm -f "$candidate_container" >/dev/null 2>&1 || true
@@ -86,6 +87,12 @@ echo "✅ 候选镜像已通过 Eve 预热与 Next.js 健康检查"
 cleanup_candidate
 trap - EXIT
 
+# Nginx 在 reload 时重新解析 Docker 容器名。必须在切换前验证配置，
+# 否则无效的其他 upstream 会阻止 reload，并让 Nginx 继续访问旧容器 IP。
+echo "Validating reverse proxy configuration..."
+docker exec "$reverse_proxy_container" nginx -t
+echo "✅ Nginx 配置允许安全 reload"
+
 # migration 独立于应用启动。失败时脚本立即退出，现有正式容器不会被替换。
 # 为保证迁移执行期间旧版本仍可服务，生产迁移必须遵循先扩展、后收缩的 expand/contract 规则。
 echo "Running database migration gate..."
@@ -101,5 +108,12 @@ AGENT_TEAM_IMAGE="$image_ref" docker compose -f "$compose_file" up -d --remove-o
 
 wait_for_production
 echo "✅ 正式容器已通过健康检查"
+
+# Docker Compose recreate 会更换容器 IP；reload 让 Nginx 重新解析服务名，避免继续代理旧 IP。
+echo "Reloading reverse proxy upstream..."
+docker exec "$reverse_proxy_container" nginx -s reload
+docker exec "$reverse_proxy_container" wget -q -O /dev/null -T 10 \
+  "http://${production_container}:3000/agent-team/"
+echo "✅ Nginx 已切换到新的正式容器"
 
 docker image prune -af --filter "until=24h"
