@@ -64,7 +64,12 @@ ENV PORT=3000
 
 # Bookworm slim 已包含 node-liblzma 运行所需的 liblzma5 共享库，
 # 但 Prisma 仍需要 openssl 命令检测正确的 Debian OpenSSL 运行时。
-RUN apt-get update \
+# 国内托管构建环境访问 deb.debian.org 可能极慢，安装前切换到国内镜像源。
+RUN sed -i \
+      -e 's|http://deb.debian.org/debian-security|http://mirrors.aliyun.com/debian-security|g' \
+      -e 's|http://deb.debian.org/debian|http://mirrors.aliyun.com/debian|g' \
+      /etc/apt/sources.list.d/debian.sources \
+ && apt-get update \
  && apt-get install -y --no-install-recommends openssl \
  && rm -rf /var/lib/apt/lists/*
 

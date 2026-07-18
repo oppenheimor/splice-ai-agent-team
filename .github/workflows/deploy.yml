@@ -1,8 +1,8 @@
 name: Deploy to Production
 
 on:
-  push:
-    branches: [main]
+  # 生产镜像已迁移到火山引擎托管构建；旧自托管流程仅保留手动应急入口。
+  workflow_dispatch:
 
 concurrency:
   group: production-deploy
