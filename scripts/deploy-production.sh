@@ -6,6 +6,12 @@ compose_file="${COMPOSE_FILE:-docker-compose.yml}"
 candidate_container="agent-team-nextjs-candidate"
 production_container="agent-team-nextjs"
 reverse_proxy_container="${REVERSE_PROXY_CONTAINER:-nginx}"
+image_retention_count="${DEPLOY_IMAGE_RETENTION_COUNT:-3}"
+
+if ! [[ "$image_retention_count" =~ ^[1-9][0-9]*$ ]]; then
+  echo "❌ DEPLOY_IMAGE_RETENTION_COUNT 必须是大于 0 的整数"
+  exit 1
+fi
 
 cleanup_candidate() {
   docker rm -f "$candidate_container" >/dev/null 2>&1 || true
@@ -65,6 +71,62 @@ wait_for_production() {
   done
 }
 
+image_id_is_retained() {
+  local image_id="$1"
+  shift
+  local retained_image_id
+  for retained_image_id in "$@"; do
+    [[ "$image_id" == "$retained_image_id" ]] && return 0
+  done
+  return 1
+}
+
+prune_old_application_images() {
+  local image_repository="${image_ref%:*}"
+  local current_image_id
+  if ! current_image_id="$(docker inspect --format '{{.Image}}' "$production_container")"; then
+    echo "⚠️ 无法读取正式容器镜像，跳过历史镜像清理"
+    return 0
+  fi
+
+  local -a image_candidates=()
+  # docker image ls 默认按创建时间倒序；按镜像 ID 去重，避免多个标签占用回滚名额。
+  while IFS= read -r image_candidate; do
+    image_candidates+=("$image_candidate")
+  done < <(docker image ls "$image_repository" --format '{{.Repository}}:{{.Tag}}')
+
+  local -a retained_image_ids=("$current_image_id")
+  local image_candidate image_id
+
+  for image_candidate in "${image_candidates[@]}"; do
+    [[ "$image_candidate" == *':<none>' ]] && continue
+    image_id="$(docker image inspect --format '{{.Id}}' "$image_candidate" 2>/dev/null || true)"
+    [[ -z "$image_id" ]] && continue
+    image_id_is_retained "$image_id" "${retained_image_ids[@]}" && continue
+
+    if (( ${#retained_image_ids[@]} < image_retention_count )); then
+      retained_image_ids+=("$image_id")
+    fi
+  done
+
+  for image_candidate in "${image_candidates[@]}"; do
+    [[ "$image_candidate" == *':<none>' ]] && continue
+    image_id="$(docker image inspect --format '{{.Id}}' "$image_candidate" 2>/dev/null || true)"
+    [[ -z "$image_id" ]] && continue
+    image_id_is_retained "$image_id" "${retained_image_ids[@]}" && continue
+
+    echo "Removing expired application image: $image_candidate"
+    if ! docker image rm "$image_candidate"; then
+      echo "⚠️ 历史镜像清理失败，保留该镜像并继续完成发布：$image_candidate"
+    fi
+  done
+
+  if ! docker image prune -f >/dev/null; then
+    echo "⚠️ dangling 镜像清理失败，不影响本次发布结果"
+  fi
+  echo "✅ 本机最多保留 ${image_retention_count} 个应用镜像版本"
+}
+
 trap cleanup_candidate EXIT
 
 echo "Pulling immutable image: $image_ref"
@@ -116,4 +178,4 @@ docker exec "$reverse_proxy_container" wget -q -O /dev/null -T 10 \
   "http://${production_container}:3000/agent-team/"
 echo "✅ Nginx 已切换到新的正式容器"
 
-docker image prune -af --filter "until=24h"
+prune_old_application_images
