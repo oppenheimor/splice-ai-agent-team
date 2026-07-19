@@ -6,6 +6,7 @@ import {
   buildRequirementsDiagnosisPrompt,
   type DiagnosisContext,
 } from "./requirements-diagnosis";
+import { buildWishIntakePrompt } from "./wish-intake";
 
 export type { DiagnosisContext };
 
@@ -23,6 +24,10 @@ export function buildSystemPrompt(
 
   if (agent.promptBuilder === "requirementsDiagnosis") {
     return buildRequirementsDiagnosisPrompt(agent, diagnosis);
+  }
+
+  if (agent.promptBuilder === "wishIntake") {
+    return buildWishIntakePrompt(agent);
   }
 
   return [

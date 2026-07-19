@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { MouseEvent } from "react";
 import {
   ChevronsLeft,
   ChevronsRight,
@@ -9,6 +10,8 @@ import {
   Pencil,
   Plus,
   Settings,
+  Sparkles,
+  Star,
   Trash2,
   X,
 } from "lucide-react";
@@ -132,10 +135,41 @@ function NavigationContent({ mobile = false, ...props }: NavigationProps & { mob
         </div>
       ) : <div className="flex-1" />}
 
+      <div className={cn("mb-4 space-y-2 border-t border-[#202824] pt-4", props.collapsed && "flex flex-col items-center")}>
+        <Link
+          className={cn(
+            wishCreatorFocus,
+            props.collapsed
+              ? "grid h-10 w-10 place-items-center rounded-lg text-[#b8ff22] hover:bg-[#111914]"
+              : "block rounded-xl border border-[#43502f] bg-[#10170f] p-3 hover:border-[#72913a]",
+          )}
+          href="/wish-creator/wish"
+          onClick={createNavigationHandler(props.onNavigate, "/wish-creator/wish")}
+          title="这里暂时做不了？告诉我们你还想实现什么"
+        >
+          {props.collapsed ? <Sparkles className="h-[18px] w-[18px]" /> : (
+            <>
+              <span className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-[#b8ff22]" />这里暂时做不了？</span>
+              <span className="mt-1.5 block text-xs leading-5 text-[#87928c]">告诉我们你还想实现什么</span>
+              <span className="mt-2 block text-xs font-bold text-[#b8ff22]">去许愿 →</span>
+            </>
+          )}
+        </Link>
+        <Link
+          className={cn(wishCreatorFocus, "flex h-9 items-center rounded-lg text-sm text-[#929d97] hover:text-white", props.collapsed ? "w-10 justify-center" : "gap-3 px-2")}
+          href="/wish-creator/wishes"
+          onClick={createNavigationHandler(props.onNavigate, "/wish-creator/wishes")}
+          title="我的愿望"
+        >
+          <Star className="h-[17px] w-[17px]" />
+          {!props.collapsed ? <span>我的愿望</span> : null}
+        </Link>
+      </div>
+
       <Link
         className={cn(
           wishCreatorFocus,
-          "flex h-11 items-center rounded-lg border-t border-[#202824] pt-3 text-sm text-[#9aa39e] hover:text-white",
+          "flex h-11 items-center rounded-lg text-sm text-[#9aa39e] hover:text-white",
           props.collapsed ? "justify-center" : "gap-3 px-1",
         )}
         href="/settings"
@@ -149,6 +183,14 @@ function NavigationContent({ mobile = false, ...props }: NavigationProps & { mob
       </Link>
     </div>
   );
+}
+
+function createNavigationHandler(onNavigate: NavigationProps["onNavigate"], path: string) {
+  if (!onNavigate) return undefined;
+  return (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    onNavigate(path);
+  };
 }
 
 function ConversationRow({

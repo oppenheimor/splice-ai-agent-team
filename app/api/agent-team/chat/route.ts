@@ -31,6 +31,8 @@ import {
 } from "@/lib/deep-diagnosis/output-validator";
 import { resolveDeepDiagnosisToolGuard } from "@/lib/deep-diagnosis/tool-guard";
 import { recordDiagnosisChatMessages } from "@/lib/requirements-diagnosis/chat-messages";
+import { WISH_INTAKE_AGENT_ID } from "@/constants/wish-intake";
+import { hasSubmittedWish } from "@/lib/wish-intake/service";
 import {
   resolveDiagnosisContext,
   type DiagnosisResolution,
@@ -94,13 +96,19 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "缺少 conversationId。" }, { status: 400 });
     }
 
-    creditCharge = await chargeCreditsForAgentRequest({
-      userId: user.id,
-      agentId: agent.id,
-      conversationId,
-      model,
-      messages,
-    });
+    if (agent.id === WISH_INTAKE_AGENT_ID && await hasSubmittedWish(user.id, conversationId)) {
+      return Response.json({ error: "这条愿望已经提交，不能继续修改对话。" }, { status: 409 });
+    }
+
+    creditCharge = agent.billingPolicy === "free"
+      ? null
+      : await chargeCreditsForAgentRequest({
+        userId: user.id,
+        agentId: agent.id,
+        conversationId,
+        model,
+        messages,
+      });
 
     await recordChatMessages({
       agent,
@@ -133,7 +141,7 @@ export async function POST(request: NextRequest) {
       inputMessageCount: messages.length,
       decision: deepDiagnosisDecision,
     });
-    if (runId) {
+    if (runId && creditCharge) {
       await attachRunToCreditCharge({
         usageRecordId: creditCharge.usageRecordId,
         ledgerEntryId: creditCharge.ledgerEntryId,
@@ -163,7 +171,7 @@ export async function POST(request: NextRequest) {
         : undefined,
       stopWhen: buildAgentStopCondition(agent.id),
       abortSignal: request.signal,
-      temperature: 0.72,
+      temperature: agent.id === WISH_INTAKE_AGENT_ID ? 0.45 : 0.72,
       providerOptions: {
         deepseek: {
           thinking: { type: model.includes("v4") || model.includes("reasoner") ? "enabled" : "disabled" },

@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import type { UIMessage } from "ai";
 import { prisma } from "@/lib/db/prisma";
 
@@ -24,44 +24,62 @@ export async function createAgentConversation(input: {
   title?: string;
 }): Promise<AgentConversationDetail> {
   const title = input.title?.trim().slice(0, 80) || "新的 Agent 会话";
-  const existing = await prisma.agentConversation.findUnique({
+  let existingOrCreated = await prisma.agentConversation.findUnique({
     where: { conversationId: input.conversationId },
     select: { id: true, userId: true, agentId: true },
   });
 
-  if (existing && (existing.userId !== input.userId || existing.agentId !== input.agentId)) {
+  if (!existingOrCreated) {
+    try {
+      existingOrCreated = await prisma.agentConversation.create({
+        data: {
+          userId: input.userId,
+          conversationId: input.conversationId,
+          agentId: input.agentId,
+          title,
+          status: "active",
+          lastMessageAt: new Date(),
+        },
+        select: { id: true, userId: true, agentId: true },
+      });
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+        throw error;
+      }
+
+      // 多个服务实例可能同时通过首次查询；唯一键冲突表示另一实例刚完成创建，重新读取即可。
+      existingOrCreated = await prisma.agentConversation.findUnique({
+        where: { conversationId: input.conversationId },
+        select: { id: true, userId: true, agentId: true },
+      });
+
+      // 若冲突记录此时仍不可见，说明并非可恢复的并发创建，保留原始数据库错误。
+      if (!existingOrCreated) {
+        throw error;
+      }
+    }
+  }
+
+  if (
+    existingOrCreated.userId !== input.userId
+    || existingOrCreated.agentId !== input.agentId
+  ) {
     throw new Error("会话已存在或无权访问。");
   }
 
-  const conversation = existing
-    ? await prisma.agentConversation.update({
-      where: { id: existing.id },
-      data: {
-        title,
-        status: "active",
-        lastMessageAt: new Date(),
+  const conversation = await prisma.agentConversation.update({
+    where: { id: existingOrCreated.id },
+    data: {
+      title,
+      status: "active",
+      lastMessageAt: new Date(),
+    },
+    include: {
+      _count: {
+        select: { messages: true },
       },
-      include: {
-        _count: {
-          select: { messages: true },
-        },
-      },
-    })
-    : await prisma.agentConversation.create({
-      data: {
-        userId: input.userId,
-        conversationId: input.conversationId,
-        agentId: input.agentId,
-        title,
-        status: "active",
-        lastMessageAt: new Date(),
-      },
-      include: {
-        _count: {
-          select: { messages: true },
-        },
-      },
-    });
+    },
+  });
 
   return {
     id: conversation.conversationId,

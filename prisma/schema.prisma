@@ -7,47 +7,48 @@ datasource db {
 }
 
 model User {
-  id              String                 @id @default(cuid())
-  username        String                 @unique
-  passwordHash    String
-  phone           String?                @unique
-  name            String?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  sessions        Session[]
-  analyticsEvents TreasureAnalyticsEvent[]
-  chatMessages    TreasureChatMessage[]
-  diagnosisResults DiagnosisQuizResult[]
-  diagnosisChatSessions DiagnosisChatSession[]
-  diagnosisChatMessages DiagnosisChatMessage[]
-  agentConversations AgentConversation[]
-  agentMessages      AgentMessage[]
-  agentRuns          AgentRun[]
-  creditAccount      CreditAccount?
-  creditLedgerEntries CreditLedgerEntry[]
-  agentUsageRecords  AgentUsageRecord[]
+  id                      String                   @id @default(cuid())
+  username                String                   @unique
+  passwordHash            String
+  phone                   String?                  @unique
+  name                    String?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  sessions                Session[]
+  analyticsEvents         TreasureAnalyticsEvent[]
+  chatMessages            TreasureChatMessage[]
+  diagnosisResults        DiagnosisQuizResult[]
+  diagnosisChatSessions   DiagnosisChatSession[]
+  diagnosisChatMessages   DiagnosisChatMessage[]
+  agentConversations      AgentConversation[]
+  agentMessages           AgentMessage[]
+  agentRuns               AgentRun[]
+  creditAccount           CreditAccount?
+  creditLedgerEntries     CreditLedgerEntry[]
+  agentUsageRecords       AgentUsageRecord[]
   wishCreatorPublications WishCreatorPublication[]
+  wishCreatorWishes       WishCreatorWish[]
 
   @@map("users")
 }
 
 model DiagnosisQuizResult {
-  id                String                 @id @default(cuid())
-  userId            String                 @map("user_id")
+  id                String                @id @default(cuid())
+  userId            String                @map("user_id")
   answers           Json
-  dimensionScores   Json                   @map("dimension_scores")
-  operatorCode      String                 @map("operator_code")
-  operatorTypeName  String                 @map("operator_type_name")
-  aiAdoptionStage   String                 @map("ai_adoption_stage")
-  userType          String                 @map("user_type")
-  cognitiveWidth    String                 @map("cognitive_width")
-  blindSpots        Json                   @map("blind_spots")
-  justNeed          String                 @map("just_need")
-  crowdType         String                 @map("crowd_type")
-  enhancedNarrative Json?                  @map("enhanced_narrative")
-  createdAt         DateTime               @default(now()) @map("created_at")
-  updatedAt         DateTime               @updatedAt @map("updated_at")
-  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dimensionScores   Json                  @map("dimension_scores")
+  operatorCode      String                @map("operator_code")
+  operatorTypeName  String                @map("operator_type_name")
+  aiAdoptionStage   String                @map("ai_adoption_stage")
+  userType          String                @map("user_type")
+  cognitiveWidth    String                @map("cognitive_width")
+  blindSpots        Json                  @map("blind_spots")
+  justNeed          String                @map("just_need")
+  crowdType         String                @map("crowd_type")
+  enhancedNarrative Json?                 @map("enhanced_narrative")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   chatSession       DiagnosisChatSession?
 
   @@index([userId, createdAt])
@@ -55,34 +56,34 @@ model DiagnosisQuizResult {
 }
 
 model DiagnosisChatSession {
-  id            String              @id @default(cuid())
-  userId        String              @map("user_id")
-  quizResultId  String              @unique @map("quiz_result_id")
-  conversationId String?            @unique @map("conversation_id")
-  status        String              @default("active")
-  lastMessageAt DateTime            @default(now()) @map("last_message_at")
-  createdAt     DateTime            @default(now()) @map("created_at")
-  updatedAt     DateTime            @updatedAt @map("updated_at")
-  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quizResult    DiagnosisQuizResult @relation(fields: [quizResultId], references: [id], onDelete: Cascade)
-  messages      DiagnosisChatMessage[]
+  id             String                 @id @default(cuid())
+  userId         String                 @map("user_id")
+  quizResultId   String                 @unique @map("quiz_result_id")
+  conversationId String?                @unique @map("conversation_id")
+  status         String                 @default("active")
+  lastMessageAt  DateTime               @default(now()) @map("last_message_at")
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizResult     DiagnosisQuizResult    @relation(fields: [quizResultId], references: [id], onDelete: Cascade)
+  messages       DiagnosisChatMessage[]
 
   @@index([userId, lastMessageAt])
   @@map("diagnosis_chat_sessions")
 }
 
 model DiagnosisChatMessage {
-  id             String   @id @default(cuid())
-  userId         String   @map("user_id")
-  chatSessionId  String   @map("chat_session_id")
-  conversationId String   @map("conversation_id")
-  messageId      String   @map("message_id")
+  id             String               @id @default(cuid())
+  userId         String               @map("user_id")
+  chatSessionId  String               @map("chat_session_id")
+  conversationId String               @map("conversation_id")
+  messageId      String               @map("message_id")
   role           String
   text           String?
   parts          Json?
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   chatSession    DiagnosisChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, messageId])
@@ -154,26 +155,27 @@ model TreasureChatMessage {
 }
 
 model AgentConversation {
-  id             String         @id @default(cuid())
-  userId         String         @map("user_id")
-  sessionId      String?        @map("session_id")
-  visitorId      String?        @map("visitor_id")
-  conversationId String         @unique @map("conversation_id")
-  agentId        String         @map("agent_id")
-  agentVersion   String?        @map("agent_version")
-  promptVersion  String?        @map("prompt_version")
-  model          String?
-  title          String?
-  status         String         @default("active")
-  firstUserText  String?        @map("first_user_text")
-  metadata       Json?
-  lastMessageAt  DateTime       @default(now()) @map("last_message_at")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages       AgentMessage[]
-  runs           AgentRun[]
+  id                      String                   @id @default(cuid())
+  userId                  String                   @map("user_id")
+  sessionId               String?                  @map("session_id")
+  visitorId               String?                  @map("visitor_id")
+  conversationId          String                   @unique @map("conversation_id")
+  agentId                 String                   @map("agent_id")
+  agentVersion            String?                  @map("agent_version")
+  promptVersion           String?                  @map("prompt_version")
+  model                   String?
+  title                   String?
+  status                  String                   @default("active")
+  firstUserText           String?                  @map("first_user_text")
+  metadata                Json?
+  lastMessageAt           DateTime                 @default(now()) @map("last_message_at")
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  updatedAt               DateTime                 @updatedAt @map("updated_at")
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages                AgentMessage[]
+  runs                    AgentRun[]
   wishCreatorPublications WishCreatorPublication[]
+  wishCreatorWish         WishCreatorWish?
 
   @@index([userId, lastMessageAt])
   @@index([agentId, lastMessageAt])
@@ -201,6 +203,35 @@ model WishCreatorPublication {
   @@index([conversationId, createdAt])
   @@index([agentConversationId, createdAt])
   @@map("wish_creator_publications")
+}
+
+model WishCreatorWish {
+  id                   String            @id @default(cuid())
+  userId               String            @map("user_id")
+  agentConversationId  String            @unique @map("agent_conversation_id")
+  conversationId       String            @unique @map("conversation_id")
+  title                String
+  goal                 String
+  usageScenario        String            @map("usage_scenario")
+  currentProblem       String            @map("current_problem")
+  idealResult          String            @map("ideal_result")
+  constraints          String?
+  capabilityGaps       Json              @map("capability_gaps")
+  analysisRationale    String            @map("analysis_rationale")
+  analysisVersion      String            @map("analysis_version")
+  contactClickCount    Int               @default(0) @map("contact_click_count")
+  lastContactClickedAt DateTime?         @map("last_contact_clicked_at")
+  userRemovedAt        DateTime?         @map("user_removed_at")
+  submittedAt          DateTime          @default(now()) @map("submitted_at")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+  user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation         AgentConversation @relation(fields: [agentConversationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, submittedAt])
+  @@index([userRemovedAt, submittedAt])
+  @@index([submittedAt])
+  @@map("wish_creator_wishes")
 }
 
 model AgentMessage {
@@ -260,34 +291,34 @@ model AgentRun {
 }
 
 model CreditAccount {
-  id             String              @id @default(cuid())
-  userId         String              @unique @map("user_id")
-  balance        Int                 @default(0)
-  totalGranted   Int                 @default(0) @map("total_granted")
-  totalConsumed  Int                 @default(0) @map("total_consumed")
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
-  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ledgerEntries  CreditLedgerEntry[]
+  id            String              @id @default(cuid())
+  userId        String              @unique @map("user_id")
+  balance       Int                 @default(0)
+  totalGranted  Int                 @default(0) @map("total_granted")
+  totalConsumed Int                 @default(0) @map("total_consumed")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledgerEntries CreditLedgerEntry[]
 
   @@map("credit_accounts")
 }
 
 model CreditLedgerEntry {
-  id                    String         @id @default(cuid())
-  userId                String         @map("user_id")
-  accountId             String         @map("account_id")
+  id                    String        @id @default(cuid())
+  userId                String        @map("user_id")
+  accountId             String        @map("account_id")
   type                  String
   amount                Int
-  balanceAfter          Int            @map("balance_after")
+  balanceAfter          Int           @map("balance_after")
   reason                String?
   source                String?
-  relatedConversationId String?        @map("related_conversation_id")
-  relatedAgentRunId     String?        @map("related_agent_run_id")
+  relatedConversationId String?       @map("related_conversation_id")
+  relatedAgentRunId     String?       @map("related_agent_run_id")
   metadata              Json?
-  createdAt             DateTime       @default(now()) @map("created_at")
-  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  account               CreditAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt             DateTime      @default(now()) @map("created_at")
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account               CreditAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([accountId, createdAt])
@@ -297,26 +328,26 @@ model CreditLedgerEntry {
 }
 
 model AgentUsageRecord {
-  id                    String   @id @default(cuid())
-  userId                String   @map("user_id")
-  agentId               String   @map("agent_id")
-  conversationId        String?  @map("conversation_id")
-  agentRunId            String?  @map("agent_run_id")
-  taskType              String   @map("task_type")
-  estimatedCredits      Int      @map("estimated_credits")
-  chargedCredits        Int      @default(0) @map("charged_credits")
-  inputTokensEstimate   Int      @default(0) @map("input_tokens_estimate")
-  outputTokensEstimate  Int      @default(0) @map("output_tokens_estimate")
-  model                 String?
-  toolCallCount         Int      @default(0) @map("tool_call_count")
-  webSearchCount        Int      @default(0) @map("web_search_count")
-  fileCount             Int      @default(0) @map("file_count")
-  hasDeliverable        Boolean  @default(false) @map("has_deliverable")
-  status                String   @default("charged")
-  metadata              Json?
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String   @id @default(cuid())
+  userId               String   @map("user_id")
+  agentId              String   @map("agent_id")
+  conversationId       String?  @map("conversation_id")
+  agentRunId           String?  @map("agent_run_id")
+  taskType             String   @map("task_type")
+  estimatedCredits     Int      @map("estimated_credits")
+  chargedCredits       Int      @default(0) @map("charged_credits")
+  inputTokensEstimate  Int      @default(0) @map("input_tokens_estimate")
+  outputTokensEstimate Int      @default(0) @map("output_tokens_estimate")
+  model                String?
+  toolCallCount        Int      @default(0) @map("tool_call_count")
+  webSearchCount       Int      @default(0) @map("web_search_count")
+  fileCount            Int      @default(0) @map("file_count")
+  hasDeliverable       Boolean  @default(false) @map("has_deliverable")
+  status               String   @default("charged")
+  metadata             Json?
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([agentId, createdAt])

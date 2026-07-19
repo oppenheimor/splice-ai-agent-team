@@ -20,6 +20,7 @@ export type PromptBuilderName =
   | "generic"
   | "deepDiagnosis"
   | "treasureHunt"
+  | "wishIntake"
   | "requirementsDiagnosis";
 
 /** 外部能力工具名称（区别于 AGUI 交互工具） */
@@ -50,6 +51,7 @@ export type AgentManifest = {
   externalTools?: ExternalToolName[];
   rendererProfile: RendererProfile;
   promptBuilder: PromptBuilderName;
+  billingPolicy?: "metered" | "free";
   memoryPolicy?: MemoryPolicy;
   evalCases?: EvalCase[];
 };

@@ -1,4 +1,5 @@
 import type { AgentManifest } from "./types";
+import { WISH_INTAKE_AGENT_ID } from "@/constants/wish-intake";
 
 export const AGENTS: AgentManifest[] = [
   {
@@ -100,6 +101,20 @@ export const AGENTS: AgentManifest[] = [
     tools: [],
     rendererProfile: "default",
     promptBuilder: "generic",
+    memoryPolicy: { mode: "session" },
+  },
+  {
+    id: WISH_INTAKE_AGENT_ID,
+    name: "愿望 Agent",
+    route: "/wish-creator/wish",
+    category: "wish-intake",
+    description: "通过自然对话帮助用户把平台暂时无法完成的愿望说清楚。",
+    version: "0.1.0",
+    starterPrompts: [],
+    tools: [],
+    rendererProfile: "default",
+    promptBuilder: "wishIntake",
+    billingPolicy: "free",
     memoryPolicy: { mode: "session" },
   },
 ];
